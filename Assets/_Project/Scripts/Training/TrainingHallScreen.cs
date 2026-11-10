@@ -1,3 +1,4 @@
+using BallroomLegends.Competition;
 using BallroomLegends.Core;
 using BallroomLegends.Dance;
 using TMPro;
@@ -7,8 +8,8 @@ namespace BallroomLegends.Training
 {
     /// <summary>
     /// The Ballroom Training Hall: the player's home base after the new-game flow.
-    /// For now it welcomes the player. Later: practice sessions, coach, outfits,
-    /// and the door to the next competition.
+    /// It welcomes the player, shows the last competition result and opens the door to the
+    /// next competition. Later: practice sessions, coach, outfits.
     /// </summary>
     public class TrainingHallScreen : MonoBehaviour
     {
@@ -31,9 +32,12 @@ namespace BallroomLegends.Training
                 _ => "You haven't chosen a style yet. Visit the Dance Guide."
             };
 
+            CompetitionResult lastResult = gameManager != null ? gameManager.LastCompetitionResult : null;
+            string resultLine = lastResult != null ? $"\nLast competition: {lastResult.Headline()}" : string.Empty;
+
             if (welcomeText != null)
             {
-                welcomeText.text = $"Welcome to the training hall, {playerName}!\n{styleLine}";
+                welcomeText.text = $"Welcome to the training hall, {playerName}!\n{styleLine}{resultLine}";
             }
         }
 
@@ -41,11 +45,8 @@ namespace BallroomLegends.Training
 
         public void BackToMainMenu() => ChangeState(GameState.MainMenu);
 
-        /// <summary>The "Go to competition" button. Competitions come in a later milestone.</summary>
-        public void GoToCompetition()
-        {
-            Debug.Log("[TrainingHall] Competitions come later (DanceManager + TournamentManager).");
-        }
+        /// <summary>The "Go to competition" button: off to the Blackpool Ballroom.</summary>
+        public void GoToCompetition() => ChangeState(GameState.Dancing);
 
         private static void ChangeState(GameState state)
         {

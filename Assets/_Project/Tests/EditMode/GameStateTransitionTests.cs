@@ -13,6 +13,7 @@ namespace BallroomLegends.Tests
         [TestCase(GameState.TrainingHall, GameState.DanceGuide)]
         [TestCase(GameState.TrainingHall, GameState.Dancing)]
         [TestCase(GameState.Dancing, GameState.Results)]
+        [TestCase(GameState.Dancing, GameState.TrainingHall)]
         [TestCase(GameState.Results, GameState.TrainingHall)]
         [TestCase(GameState.DanceGuide, GameState.MainMenu)]
         public void LegalTransitions_AreAllowed(GameState from, GameState to)

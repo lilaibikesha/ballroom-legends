@@ -8,16 +8,19 @@ with the music, and impress the judges round after round to win the championship
 
 ## MVP scope
 
-- [ ] Main menu (Start Game)
-- [ ] Create your dancer: type a name, pick boy or girl
-- [ ] Dance Guide: Standard vs Latin, the 5 dances of each, a detail page per dance
+- [x] Main menu (Start Game)
+- [x] Create your dancer: type a name, pick boy or girl
+- [x] Dance Guide: Standard vs Latin, the 5 dances of each, a detail page per dance
       (history, characteristics, skills, tempo, video placeholder)
-- [ ] Choose a path: Standard only or Latin only
-- [ ] Ballroom Training Hall (home base)
-- [ ] One 2D ballroom (Blackpool Ballroom)
-- [ ] Basic Waltz rhythm mechanic (3/4 time, timing windows: Perfect / Good / Miss)
-- [ ] Simple tournament: judges' scores, ranking, advancing through rounds
-- [ ] Results screen
+- [x] Choose a path: Standard only or Latin only
+- [x] Ballroom Training Hall (home base)
+- [x] One 2D ballroom (Blackpool Ballroom, placeholder art)
+- [x] Basic Waltz rhythm mechanic (3/4 time, timing windows: Perfect / Good / Miss)
+- [x] Simple tournament: 48 couples, 5 judges, recalls through Heat, Quarter-final,
+      Semi-final and Final
+- [x] Results screen
+
+Code is written but still needs a first run in Unity: see `docs/COMPETITION.md` > Try it.
 
 Later: outfit and appearance customization, more dances (Tango, Foxtrot, Quickstep,
 Viennese Waltz), Skating System judging, partner AI, music library.
@@ -39,7 +42,8 @@ Viennese Waltz), Skating System judging, partner AI, music library.
    `ProjectSettings/ProjectVersion.txt`).
 2. Clone the repo: `git clone https://github.com/lilaibikesha/ballroom-legends.git`
 3. In Unity Hub: **Add > Add project from disk** and pick the cloned folder.
-4. First time only: menu **Ballroom Legends > Create Initial Scenes** (creates the 4 scenes).
+4. First time only: menu **Ballroom Legends > Create Initial Scenes** (creates the 6 scenes).
+   Already ran it before the competition milestone? Run **Ballroom Legends > Rebuild Competition Scenes** once.
 5. Open `Assets/_Project/Scenes/MainMenu.unity` and press Play.
 6. Run tests: **Window > General > Test Runner > EditMode > Run All**.
 
@@ -54,11 +58,15 @@ Assets/
     Scripts/                Runtime code (BallroomLegends.asmdef)
       Core/                 GameManager, GameState, SceneNames
       Characters/           CharacterSelection (name + dancer), DancerCharacter
-      Dance/                DanceStyle, DanceInfo, DanceLibrary, DanceManager, HitResult
+      Dance/                DanceStyle, DanceInfo, DanceLibrary, DanceManager, HitResult,
+                            RhythmMath, PerformanceTracker, MetronomeClip
       Player/               PlayerNameRules
-      UI/                   MainMenuScreen, DanceGuideScreen
+      UI/                   MainMenuScreen, DanceGuideScreen, ResultsScreen
       Training/             TrainingHallScreen
-      Tournament/           TournamentManager, Couple, RoundType
+      Tournament/           TournamentManager, TournamentRules, JudgePanel, CompetitorField,
+                            Couple, RoundType, RandomUtil
+      Competition/          CompetitionController (ballroom scene), CompetitionResult,
+                            RoundReport, RankingEntry, TextFormat
     Editor/                 Editor-only tools (BallroomLegends.Editor.asmdef)
     Tests/EditMode/         Unit tests (BallroomLegends.Tests.EditMode.asmdef)
     Sprites/                Characters, Ballroom, UI
@@ -77,12 +85,16 @@ ProjectSettings/            Unity project settings (tracked)
 | `CharacterSelection` | Create-your-dancer screen: name input, highlight and confirm boy or girl. |
 | `DanceInfo` / `DanceLibrary` | ScriptableObject data for the 10 dances (edited in the Inspector, read by code). |
 | `DanceGuideScreen` | Dance Guide panels: style overview, dance list, dance detail, style choice. |
-| `TrainingHallScreen` | The Ballroom Training Hall, the player's home base. |
-| `DanceManager` | Waltz rhythm: tracks the beat from the audio clock and rates each step. |
-| `TournamentManager` | Couples, judges' scores, rankings and round progression. |
+| `TrainingHallScreen` | The Ballroom Training Hall, the player's home base. Opens the competition. |
+| `DanceManager` | Rhythm mechanic: click track on the audio clock, judges each step, raises events. |
+| `RhythmMath` / `PerformanceTracker` | Pure timing math, and the Perfect / Good / Miss counts and 0-100 score. |
+| `TournamentManager` | Registers couples, stores judges' marks, ranks, recalls the best to the next round. |
+| `JudgePanel` / `CompetitorField` | Turns a dance into judges' marks; creates the 47 AI couples. |
+| `CompetitionController` | Ballroom scene director: connects the dance, the tournament and the UI. |
+| `ResultsScreen` | Shows the competition, round by round. |
 
 Game flow: `MainMenu -> CharacterSelection -> DanceGuide -> TrainingHall -> BlackpoolBallroom (Dancing) -> Results`
-(details and UI build steps in [docs/GAME_FLOW.md](docs/GAME_FLOW.md))
+(new-game flow: [docs/GAME_FLOW.md](docs/GAME_FLOW.md), competition: [docs/COMPETITION.md](docs/COMPETITION.md))
 
 Principles: one responsibility per class, pure logic (scoring, timing) kept free of Unity
 APIs so it can be unit tested, and no magic strings (scene names live in `SceneNames`).

@@ -21,6 +21,8 @@ namespace BallroomLegends.EditorTools
         public static readonly Color Panel = new Color(0.20f, 0.13f, 0.30f, 0.95f);
         public static readonly Color ButtonColor = new Color(0.56f, 0.20f, 0.44f);
         public static readonly Color ErrorColor = new Color(1f, 0.45f, 0.45f);
+        public static readonly Color FloorColor = new Color(0.42f, 0.27f, 0.16f);
+        public static readonly Color FloorEdgeColor = new Color(0.62f, 0.45f, 0.24f);
 
         private static TMP_DefaultControls.Resources _controlResources;
         private static bool _controlResourcesLoaded;
@@ -132,6 +134,21 @@ namespace BallroomLegends.EditorTools
             image.sprite = ControlResources.background;
             image.type = Image.Type.Sliced;
             image.color = color;
+            return rect;
+        }
+
+        /// <summary>A colored circle (the round "knob" sprite). Purely decorative: it ignores clicks.</summary>
+        public static RectTransform CreateCircle(Transform parent, string name, Vector2 position, Vector2 size, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            Place(rect, position, size);
+
+            var image = go.GetComponent<Image>();
+            image.sprite = ControlResources.knob;
+            image.color = color;
+            image.raycastTarget = false;
             return rect;
         }
 

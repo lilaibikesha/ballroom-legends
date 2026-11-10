@@ -1,4 +1,5 @@
 using BallroomLegends.Characters;
+using BallroomLegends.Competition;
 using BallroomLegends.Dance;
 using BallroomLegends.Player;
 using UnityEngine;
@@ -25,6 +26,13 @@ namespace BallroomLegends.Core
         public string PlayerName { get; private set; } = string.Empty;
         public DancerCharacter SelectedCharacter { get; private set; } = DancerCharacter.None;
         public DanceStyle ChosenStyle { get; private set; } = DanceStyle.None;
+
+        /// <summary>
+        /// The competition that just ended, for the Results screen and the Training Hall.
+        /// Null until the first competition. The GameManager only stores it: the scoring
+        /// logic lives in the Competition and Tournament classes.
+        /// </summary>
+        public CompetitionResult LastCompetitionResult { get; private set; }
 
         /// <summary>
         /// Creates the GameManager automatically when you press Play, in ANY scene.
@@ -114,6 +122,19 @@ namespace BallroomLegends.Core
             return true;
         }
 
+        public bool SetCompetitionResult(CompetitionResult result)
+        {
+            if (result == null)
+            {
+                Debug.LogWarning("[GameManager] Rejected competition result: null.");
+                return false;
+            }
+
+            LastCompetitionResult = result;
+            Debug.Log($"[GameManager] Competition result: {result.Headline()}");
+            return true;
+        }
+
         // ---------- State machine ----------
 
         /// <summary>Moves to a new state and loads its scene, if the move is allowed.</summary>
@@ -157,6 +178,7 @@ namespace BallroomLegends.Core
                 (GameState.TrainingHall, GameState.DanceGuide) => true,
                 (GameState.TrainingHall, GameState.Dancing) => true,
                 (GameState.Dancing, GameState.Results) => true,
+                (GameState.Dancing, GameState.TrainingHall) => true, // Withdraw
                 (GameState.Results, GameState.TrainingHall) => true,
                 _ => false
             };

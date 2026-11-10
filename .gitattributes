@@ -1,0 +1,32 @@
+# Let Git normalize line endings for text files
+* text=auto
+
+# Code and config
+*.cs        text diff=csharp
+*.asmdef    text
+*.json      text
+*.md        text
+*.sh        text eol=lf
+
+# Unity YAML assets (readable text because Asset Serialization = Force Text)
+*.unity      text
+*.prefab     text
+*.asset      text
+*.meta       text
+*.mat        text
+*.anim       text
+*.controller text
+*.inputactions text
+
+# Binary assets: never diff or merge these
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.psd  binary
+*.aseprite binary
+*.wav  binary
+*.mp3  binary
+*.ogg  binary
+*.ttf  binary
+*.otf  binary
+# Later, when art/audio grows, move these to Git LFS (git lfs track "*.png" ...)

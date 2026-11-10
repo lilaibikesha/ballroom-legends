@@ -1,0 +1,26 @@
+{
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/*.meta": true,
+    "Library": true,
+    "Logs": true,
+    "Temp": true,
+    "obj": true,
+    "UserSettings": true,
+    "**/*.unitypackage": true
+  },
+  "search.exclude": {
+    "Library": true,
+    "Logs": true,
+    "Temp": true,
+    "obj": true
+  },
+  "files.associations": {
+    "*.asmdef": "json",
+    "*.inputactions": "json"
+  },
+  "editor.rulers": [120],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

@@ -1,14 +1,21 @@
 using BallroomLegends.Core;
+using TMPro;
 using UnityEngine;
 
 namespace BallroomLegends.Characters
 {
     /// <summary>
-    /// Controls the Character Selection screen. Wire the public methods to UI Buttons
-    /// in the Inspector (Button component > On Click () > drag this object > pick the method).
+    /// "Create your dancer" screen: type a name and pick boy or girl.
+    /// Wire the public methods to UI Buttons in the Inspector
+    /// (Button component > On Click () > drag this object > pick the method).
     /// </summary>
     public class CharacterSelection : MonoBehaviour
     {
+        [Header("Name")]
+        [SerializeField] private TMP_InputField nameInput;
+        [Tooltip("Shows a message like 'Name must be 2-16 letters'. Optional.")]
+        [SerializeField] private TMP_Text errorText;
+
         [Header("Previews shown when a character is highlighted")]
         [SerializeField] private GameObject boyPreview;
         [SerializeField] private GameObject girlPreview;
@@ -32,9 +39,12 @@ namespace BallroomLegends.Characters
         public void ConfirmSelection()
         {
             // TODO (you):
-            //  1. Don't allow confirming while nothing is highlighted.
-            //  2. Save the choice: GameManager.Instance.SetSelectedCharacter(...).
-            //  3. Ask the GameManager to move on: ChangeState(GameState.Dancing).
+            //  1. Read the name from nameInput.text and check it with PlayerNameRules.IsValid
+            //     (namespace BallroomLegends.Player). If it's invalid, show a message in
+            //     errorText and stop.
+            //  2. Don't allow confirming while no dancer is highlighted.
+            //  3. Save both: GameManager.Instance.SetPlayerName(...) and SetSelectedCharacter(...).
+            //  4. Move on: GameManager.Instance.ChangeState(GameState.DanceGuide).
             //  Debugging exercise: press Play directly in THIS scene. Why is
             //  GameManager.Instance null, and how could you fix it?
         }

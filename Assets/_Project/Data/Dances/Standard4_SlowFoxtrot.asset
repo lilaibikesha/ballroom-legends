@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Standard4_SlowFoxtrot
+  m_EditorClassIdentifier: 
+  displayName: "Slow Foxtrot"
+  style: 1
+  origin: "New York, USA; refined in England"
+  history: "The foxtrot is named after vaudeville performer Harry Fox, whose trotting steps became popular in New York in 1914. In the 1920s English dancers turned it into the smooth Slow Foxtrot, built on long gliding steps and a slow-quick-quick rhythm. Many dancers think it is the hardest Standard dance to do well."
+  timeSignature: "4/4"
+  tempoMinBarsPerMinute: 28
+  tempoMaxBarsPerMinute: 30
+  difficulty: 5
+  characteristics:
+  - "Smooth and gliding"
+  - "Sophisticated and relaxed"
+  - "Slow-quick-quick rhythm"
+  - "Travels far around the floor"
+  skills:
+  - "Heel leads and long, continuous steps"
+  - "Swing and sway"
+  - "Very precise rise and fall"
+  - "Musicality"
+  video: {fileID: 0}

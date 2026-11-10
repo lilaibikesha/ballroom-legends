@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Latin1_Samba
+  m_EditorClassIdentifier: 
+  displayName: "Samba"
+  style: 2
+  origin: "Brazil"
+  history: "Samba comes from Brazil, where it grew from African rhythms and dances brought by enslaved people and became the heartbeat of the Rio de Janeiro Carnival. A ballroom version was standardized in Europe in the mid-1900s. It travels around the floor with a special bounce action and rolling body movements."
+  timeSignature: "2/4"
+  tempoMinBarsPerMinute: 50
+  tempoMaxBarsPerMinute: 52
+  difficulty: 4
+  characteristics:
+  - "Festive and lively"
+  - "Bouncy"
+  - "Travels around the floor"
+  - "Syncopated rhythms"
+  skills:
+  - "Bounce action through knees and ankles"
+  - "Hip and body rolls"
+  - "Quick weight changes"
+  - "Strong sense of rhythm"
+  video: {fileID: 0}

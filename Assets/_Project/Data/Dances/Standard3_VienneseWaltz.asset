@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Standard3_VienneseWaltz
+  m_EditorClassIdentifier: 
+  displayName: "Viennese Waltz"
+  style: 1
+  origin: "Vienna, Austria"
+  history: "The original fast waltz, danced in the ballrooms of Vienna in the 1800s and made famous by the music of Johann Strauss II, such as The Blue Danube. It is one of the oldest ballroom dances still danced today. Couples rotate almost non-stop in natural (right) and reverse (left) turns, linked by simple changes and the fleckerl, a spin on the spot."
+  timeSignature: "3/4"
+  tempoMinBarsPerMinute: 58
+  tempoMaxBarsPerMinute: 60
+  difficulty: 4
+  characteristics:
+  - "Very fast"
+  - "Constant rotation"
+  - "Whirling and elegant"
+  skills:
+  - "Stamina"
+  - "Balance while turning"
+  - "Smooth footwork at high speed"
+  - "Moving as one with your partner"
+  video: {fileID: 0}

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Standard1_Waltz
+  m_EditorClassIdentifier: 
+  displayName: "Waltz"
+  style: 1
+  origin: "Austria and southern Germany; modern form refined in England"
+  history: "The waltz grew out of the Landler, a turning folk dance from Austria and southern Germany, in the late 1700s. Its close hold shocked many people at the time. In the 1910s and 1920s English dancers slowed it down and added the rise and fall and swing that define today's Slow (English) Waltz. It is the first dance of every Standard competition."
+  timeSignature: "3/4"
+  tempoMinBarsPerMinute: 28
+  tempoMaxBarsPerMinute: 30
+  difficulty: 2
+  characteristics:
+  - "Slow and flowing"
+  - "Romantic and elegant"
+  - "Accent on beat 1: ONE-two-three"
+  - "Strong rise and fall"
+  skills:
+  - "Rise and fall through feet, knees and body"
+  - "Swing and sway"
+  - "A steady closed hold (frame)"
+  - "Control on slow music"
+  video: {fileID: 0}

@@ -8,6 +8,8 @@ namespace BallroomLegends.Core
     {
         public const string MainMenu = "MainMenu";
         public const string CharacterSelection = "CharacterSelection";
+        public const string DanceGuide = "DanceGuide";
+        public const string TrainingHall = "TrainingHall";
         public const string BlackpoolBallroom = "BlackpoolBallroom";
         public const string Results = "Results";
 
@@ -16,6 +18,8 @@ namespace BallroomLegends.Core
         {
             MainMenu,
             CharacterSelection,
+            DanceGuide,
+            TrainingHall,
             BlackpoolBallroom,
             Results
         };

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Latin3_Rumba
+  m_EditorClassIdentifier: 
+  displayName: "Rumba"
+  style: 2
+  origin: "Cuba"
+  history: "Ballroom Rumba is rooted in Afro-Cuban son and bolero music. Teachers such as Monsieur Pierre (Pierre Lavelle) in London studied dancing in Cuba and helped shape the modern Cuban-style Rumba that was standardized in the 1950s. It is the slowest Latin dance and is often called the dance of love."
+  timeSignature: "4/4"
+  tempoMinBarsPerMinute: 25
+  tempoMaxBarsPerMinute: 27
+  difficulty: 3
+  characteristics:
+  - "Slow and sensual"
+  - "Romantic"
+  - "Expressive, tells a story"
+  - "Counted 2, 3, 4-1"
+  skills:
+  - "Strong Cuban motion"
+  - "Balance and control at slow speed"
+  - "Long body lines and extensions"
+  - "Connection with your partner"
+  video: {fileID: 0}

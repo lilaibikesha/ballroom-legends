@@ -8,8 +8,12 @@ with the music, and impress the judges round after round to win the championship
 
 ## MVP scope
 
-- [ ] Main menu
-- [ ] Character selection (boy or girl)
+- [ ] Main menu (Start Game)
+- [ ] Create your dancer: type a name, pick boy or girl
+- [ ] Dance Guide: Standard vs Latin, the 5 dances of each, a detail page per dance
+      (history, characteristics, skills, tempo, video placeholder)
+- [ ] Choose a path: Standard only or Latin only
+- [ ] Ballroom Training Hall (home base)
 - [ ] One 2D ballroom (Blackpool Ballroom)
 - [ ] Basic Waltz rhythm mechanic (3/4 time, timing windows: Perfect / Good / Miss)
 - [ ] Simple tournament: judges' scores, ranking, advancing through rounds
@@ -44,11 +48,16 @@ Viennese Waltz), Skating System judging, partner AI, music library.
 ```
 Assets/
   _Project/                 Everything we create (keeps it apart from imported assets)
-    Scenes/                 MainMenu, CharacterSelection, BlackpoolBallroom, Results
+    Scenes/                 MainMenu, CharacterSelection, DanceGuide, TrainingHall,
+                            BlackpoolBallroom, Results
+    Data/                   DanceLibrary.asset + Dances/ (10 DanceInfo assets)
     Scripts/                Runtime code (BallroomLegends.asmdef)
       Core/                 GameManager, GameState, SceneNames
-      Characters/           CharacterSelection, DancerCharacter
-      Dance/                DanceManager, HitResult
+      Characters/           CharacterSelection (name + dancer), DancerCharacter
+      Dance/                DanceStyle, DanceInfo, DanceLibrary, DanceManager, HitResult
+      Player/               PlayerNameRules
+      UI/                   MainMenuScreen, DanceGuideScreen
+      Training/             TrainingHallScreen
       Tournament/           TournamentManager, Couple, RoundType
     Editor/                 Editor-only tools (BallroomLegends.Editor.asmdef)
     Tests/EditMode/         Unit tests (BallroomLegends.Tests.EditMode.asmdef)
@@ -65,11 +74,15 @@ ProjectSettings/            Unity project settings (tracked)
 | Class | Responsibility |
 | --- | --- |
 | `GameManager` | Persistent singleton. Owns the game state machine, scene flow and the chosen character. |
-| `CharacterSelection` | Character Selection screen: highlight and confirm boy or girl. |
+| `CharacterSelection` | Create-your-dancer screen: name input, highlight and confirm boy or girl. |
+| `DanceInfo` / `DanceLibrary` | ScriptableObject data for the 10 dances (edited in the Inspector, read by code). |
+| `DanceGuideScreen` | Dance Guide panels: style overview, dance list, dance detail, style choice. |
+| `TrainingHallScreen` | The Ballroom Training Hall, the player's home base. |
 | `DanceManager` | Waltz rhythm: tracks the beat from the audio clock and rates each step. |
 | `TournamentManager` | Couples, judges' scores, rankings and round progression. |
 
-Game flow: `MainMenu -> CharacterSelection -> BlackpoolBallroom (Dancing) -> Results`
+Game flow: `MainMenu -> CharacterSelection -> DanceGuide -> TrainingHall -> BlackpoolBallroom (Dancing) -> Results`
+(details and UI build steps in [docs/GAME_FLOW.md](docs/GAME_FLOW.md))
 
 Principles: one responsibility per class, pure logic (scoring, timing) kept free of Unity
 APIs so it can be unit tested, and no magic strings (scene names live in `SceneNames`).

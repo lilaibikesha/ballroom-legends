@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Latin2_ChaChaCha
+  m_EditorClassIdentifier: 
+  displayName: "Cha Cha Cha"
+  style: 2
+  origin: "Cuba"
+  history: "Cha Cha Cha was created in Cuba in the early 1950s, when violinist and composer Enrique Jorrin wrote music with a new, catchy rhythm. The name copies the sound of the dancers' feet on the quick triple step: cha-cha-cha. It is playful, cheeky and very precise."
+  timeSignature: "4/4"
+  tempoMinBarsPerMinute: 30
+  tempoMaxBarsPerMinute: 32
+  difficulty: 2
+  characteristics:
+  - "Playful and flirty"
+  - "Sharp and rhythmic"
+  - "Counted 2, 3, 4-and-1"
+  skills:
+  - "Cuban motion (hip action)"
+  - "Fast, neat footwork"
+  - "Straight leg action"
+  - "Precise timing"
+  video: {fileID: 0}

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3479948a2a3641fcbf19583885be0e32, type: 3}
+  m_Name: Latin5_Jive
+  m_EditorClassIdentifier: 
+  displayName: "Jive"
+  style: 2
+  origin: "USA"
+  history: "Jive comes from swing dances such as the Lindy Hop and the Jitterbug, danced to swing and rock and roll music in the USA in the 1930s and 1940s. American soldiers brought it to Europe during World War II, and it later joined the Latin competition program. It is the fastest, most energetic Latin dance and usually closes a Latin competition."
+  timeSignature: "4/4"
+  tempoMinBarsPerMinute: 42
+  tempoMaxBarsPerMinute: 44
+  difficulty: 4
+  characteristics:
+  - "Very fast"
+  - "Happy and energetic"
+  - "Kicks and flicks"
+  - "Bouncy"
+  skills:
+  - "Stamina"
+  - "Quick, sharp kicks and flicks"
+  - "Fast chasse footwork"
+  - "Staying light on the balls of the feet"
+  video: {fileID: 0}

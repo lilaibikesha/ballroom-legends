@@ -2,7 +2,10 @@
   "name": "BallroomLegends.Editor",
   "rootNamespace": "BallroomLegends.EditorTools",
   "references": [
-    "BallroomLegends"
+    "BallroomLegends",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [
     "Editor"

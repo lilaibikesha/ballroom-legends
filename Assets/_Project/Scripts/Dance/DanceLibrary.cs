@@ -21,11 +21,16 @@ namespace BallroomLegends.Dance
         {
             var result = new List<DanceInfo>();
 
-            // TODO (you): loop over `dances` and add each one whose Style matches `style`.
-            //  - Skip null entries (an empty slot in the Inspector list is null).
-            //  - Keep the original order (the guide shows dances in competition order).
-            //  Bonus: write it a second time with LINQ (using System.Linq; .Where(...).ToList())
-            //  and decide which version you find easier to read.
+            // A plain loop keeps the list order, which is the competition order.
+            // LINQ version, same result: dances.Where(d => d != null && d.Style == style).ToList()
+            foreach (DanceInfo dance in dances)
+            {
+                // An empty slot in the Inspector list is null: skip it instead of crashing.
+                if (dance != null && dance.Style == style)
+                {
+                    result.Add(dance);
+                }
+            }
 
             return result;
         }

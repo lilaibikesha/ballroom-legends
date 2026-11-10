@@ -1,5 +1,6 @@
 using BallroomLegends.Characters;
 using BallroomLegends.Dance;
+using BallroomLegends.Player;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -25,10 +26,34 @@ namespace BallroomLegends.Core
         public DancerCharacter SelectedCharacter { get; private set; } = DancerCharacter.None;
         public DanceStyle ChosenStyle { get; private set; } = DanceStyle.None;
 
+        /// <summary>
+        /// Creates the GameManager automatically when you press Play, in ANY scene.
+        ///
+        /// This answers the old debugging exercise ("why is GameManager.Instance null when I
+        /// press Play in the CharacterSelection scene?"): the GameManager used to live only in
+        /// the MainMenu scene, so starting anywhere else meant it never existed.
+        /// [RuntimeInitializeOnLoadMethod] makes Unity call this static method on startup.
+        /// AfterSceneLoad runs after the first scene's Awake calls but before any Start, so
+        /// screens can safely use GameManager.Instance in Start().
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void CreateOnStartup()
+        {
+            if (Instance != null)
+            {
+                return;
+            }
+
+            new GameObject(nameof(GameManager)).AddComponent<GameManager>();
+
+            // Start in the state that matches the scene you pressed Play in.
+            Instance.CurrentState = StateForScene(SceneManager.GetActiveScene().name);
+            Debug.Log($"[GameManager] Created. Starting state: {Instance.CurrentState}");
+        }
+
         private void Awake()
         {
-            // Singleton: if another GameManager already exists (e.g. we came back to the
-            // MainMenu scene), destroy this duplicate and keep the original.
+            // Singleton: if another GameManager already exists, destroy this duplicate.
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
@@ -47,39 +72,123 @@ namespace BallroomLegends.Core
             }
         }
 
-        public void SetPlayerName(string playerName)
+        // ---------- Player choices ----------
+
+        /// <summary>Saves the cleaned name. Returns false (and changes nothing) if it's invalid.</summary>
+        public bool SetPlayerName(string playerName)
         {
-            // TODO (you): only accept names where PlayerNameRules.IsValid(...) is true, and
-            // store the cleaned version (PlayerNameRules.Clean). Log a warning otherwise.
-            PlayerName = playerName;
+            if (!PlayerNameRules.IsValid(playerName))
+            {
+                Debug.LogWarning($"[GameManager] Rejected name '{playerName}': {PlayerNameRules.GetError(playerName)}");
+                return false;
+            }
+
+            PlayerName = PlayerNameRules.Clean(playerName);
+            Debug.Log($"[GameManager] Player name: {PlayerName}");
+            return true;
         }
 
-        public void SetSelectedCharacter(DancerCharacter character)
+        public bool SetSelectedCharacter(DancerCharacter character)
         {
-            // TODO (you): reject DancerCharacter.None with Debug.LogWarning, and log the
-            // accepted choice with Debug.Log so you can see it in the Console.
+            if (character == DancerCharacter.None)
+            {
+                Debug.LogWarning("[GameManager] Rejected character: None.");
+                return false;
+            }
+
             SelectedCharacter = character;
+            Debug.Log($"[GameManager] Character: {SelectedCharacter}");
+            return true;
         }
 
-        public void SetChosenStyle(DanceStyle style)
+        public bool SetChosenStyle(DanceStyle style)
         {
-            // TODO (you): reject DanceStyle.None, log the accepted choice.
+            if (style == DanceStyle.None)
+            {
+                Debug.LogWarning("[GameManager] Rejected style: None.");
+                return false;
+            }
+
             ChosenStyle = style;
+            Debug.Log($"[GameManager] Chosen style: {ChosenStyle}");
+            return true;
         }
 
+        // ---------- State machine ----------
+
+        /// <summary>Moves to a new state and loads its scene, if the move is allowed.</summary>
         public void ChangeState(GameState newState)
         {
-            // TODO (you): implement a small state machine.
-            //  1. Decide which transitions are legal. The new-game flow is:
-            //     MainMenu -> CharacterSelection -> DanceGuide -> TrainingHall
-            //     TrainingHall -> Dancing -> Results -> TrainingHall
-            //     Going back to MainMenu is probably always fine. MainMenu -> Results is not.
-            //     Reject illegal ones with Debug.LogWarning.
-            //  2. Update CurrentState.
-            //  3. Load the matching scene with LoadScene(...).
-            //     Tip: a C# switch expression mapping GameState -> SceneNames.* keeps this tidy:
-            //       string scene = newState switch { GameState.MainMenu => SceneNames.MainMenu, ... };
-            Debug.Log($"[GameManager] ChangeState({newState}) is not implemented yet.");
+            if (!CanTransition(CurrentState, newState))
+            {
+                Debug.LogWarning($"[GameManager] Illegal transition {CurrentState} -> {newState}. Ignored.");
+                return;
+            }
+
+            Debug.Log($"[GameManager] {CurrentState} -> {newState}");
+            CurrentState = newState;
+            LoadScene(SceneFor(newState));
+        }
+
+        /// <summary>
+        /// The rules of the state machine: which state may follow which.
+        /// It's static and pure (no Unity calls), so tests can check every rule
+        /// without pressing Play. See Tests/EditMode/GameStateTransitionTests.cs.
+        /// </summary>
+        public static bool CanTransition(GameState from, GameState to)
+        {
+            if (from == to)
+            {
+                return false;
+            }
+
+            // Going back to the main menu is always allowed.
+            if (to == GameState.MainMenu)
+            {
+                return true;
+            }
+
+            // A tuple switch lists every legal (from, to) pair in one readable table.
+            return (from, to) switch
+            {
+                (GameState.MainMenu, GameState.CharacterSelection) => true,
+                (GameState.CharacterSelection, GameState.DanceGuide) => true,
+                (GameState.DanceGuide, GameState.TrainingHall) => true,
+                (GameState.TrainingHall, GameState.DanceGuide) => true,
+                (GameState.TrainingHall, GameState.Dancing) => true,
+                (GameState.Dancing, GameState.Results) => true,
+                (GameState.Results, GameState.TrainingHall) => true,
+                _ => false
+            };
+        }
+
+        /// <summary>Which scene shows each state.</summary>
+        public static string SceneFor(GameState state)
+        {
+            return state switch
+            {
+                GameState.MainMenu => SceneNames.MainMenu,
+                GameState.CharacterSelection => SceneNames.CharacterSelection,
+                GameState.DanceGuide => SceneNames.DanceGuide,
+                GameState.TrainingHall => SceneNames.TrainingHall,
+                GameState.Dancing => SceneNames.BlackpoolBallroom,
+                GameState.Results => SceneNames.Results,
+                _ => SceneNames.MainMenu
+            };
+        }
+
+        /// <summary>The reverse of <see cref="SceneFor"/>. Unknown scenes count as MainMenu.</summary>
+        public static GameState StateForScene(string sceneName)
+        {
+            return sceneName switch
+            {
+                SceneNames.CharacterSelection => GameState.CharacterSelection,
+                SceneNames.DanceGuide => GameState.DanceGuide,
+                SceneNames.TrainingHall => GameState.TrainingHall,
+                SceneNames.BlackpoolBallroom => GameState.Dancing,
+                SceneNames.Results => GameState.Results,
+                _ => GameState.MainMenu
+            };
         }
 
         private void LoadScene(string sceneName)

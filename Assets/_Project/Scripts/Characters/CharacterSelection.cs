@@ -1,4 +1,5 @@
 using BallroomLegends.Core;
+using BallroomLegends.Player;
 using TMPro;
 using UnityEngine;
 
@@ -6,23 +7,43 @@ namespace BallroomLegends.Characters
 {
     /// <summary>
     /// "Create your dancer" screen: type a name and pick boy or girl.
-    /// Wire the public methods to UI Buttons in the Inspector
-    /// (Button component > On Click () > drag this object > pick the method).
+    /// Buttons call the public methods (Button > On Click () in the Inspector).
     /// </summary>
     public class CharacterSelection : MonoBehaviour
     {
         [Header("Name")]
         [SerializeField] private TMP_InputField nameInput;
-        [Tooltip("Shows a message like 'Name must be 2-16 letters'. Optional.")]
+        [Tooltip("Shows a message like 'Please type your name'. Optional.")]
         [SerializeField] private TMP_Text errorText;
 
-        [Header("Previews shown when a character is highlighted")]
+        [Header("Shown when a character is highlighted (e.g. a gold frame)")]
         [SerializeField] private GameObject boyPreview;
         [SerializeField] private GameObject girlPreview;
 
         private DancerCharacter _highlighted = DancerCharacter.None;
 
         public DancerCharacter Highlighted => _highlighted;
+
+        private void Start()
+        {
+            ShowError(string.Empty);
+
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager != null)
+            {
+                // Coming back to this screen? Pre-fill the previous choices.
+                if (nameInput != null && !string.IsNullOrEmpty(gameManager.PlayerName))
+                {
+                    nameInput.text = gameManager.PlayerName;
+                }
+
+                Highlight(gameManager.SelectedCharacter);
+            }
+            else
+            {
+                Highlight(DancerCharacter.None);
+            }
+        }
 
         public void SelectBoy() => Highlight(DancerCharacter.Boy);
 
@@ -32,21 +53,57 @@ namespace BallroomLegends.Characters
         {
             _highlighted = character;
 
-            // TODO (you): show the matching preview and hide the other one
-            // (GameObject.SetActive). What should happen if a preview isn't assigned?
+            // SetActive(bool) with a comparison: shows exactly one preview (or none).
+            // The null checks mean a missing preview doesn't crash the screen.
+            if (boyPreview != null)
+            {
+                boyPreview.SetActive(character == DancerCharacter.Boy);
+            }
+
+            if (girlPreview != null)
+            {
+                girlPreview.SetActive(character == DancerCharacter.Girl);
+            }
         }
 
         public void ConfirmSelection()
         {
-            // TODO (you):
-            //  1. Read the name from nameInput.text and check it with PlayerNameRules.IsValid
-            //     (namespace BallroomLegends.Player). If it's invalid, show a message in
-            //     errorText and stop.
-            //  2. Don't allow confirming while no dancer is highlighted.
-            //  3. Save both: GameManager.Instance.SetPlayerName(...) and SetSelectedCharacter(...).
-            //  4. Move on: GameManager.Instance.ChangeState(GameState.DanceGuide).
-            //  Debugging exercise: press Play directly in THIS scene. Why is
-            //  GameManager.Instance null, and how could you fix it?
+            string rawName = nameInput != null ? nameInput.text : string.Empty;
+
+            // 1. Validate everything first ("guard clauses"), then act. Each check exits
+            //    early, so the happy path at the bottom stays flat and easy to read.
+            string nameError = PlayerNameRules.GetError(rawName);
+            if (nameError != null)
+            {
+                ShowError(nameError);
+                return;
+            }
+
+            if (_highlighted == DancerCharacter.None)
+            {
+                ShowError("Pick your dancer: boy or girl.");
+                return;
+            }
+
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager == null)
+            {
+                Debug.LogError("[CharacterSelection] No GameManager.");
+                return;
+            }
+
+            // 2. Save the choices, 3. move on.
+            gameManager.SetPlayerName(rawName);
+            gameManager.SetSelectedCharacter(_highlighted);
+            gameManager.ChangeState(GameState.DanceGuide);
+        }
+
+        private void ShowError(string message)
+        {
+            if (errorText != null)
+            {
+                errorText.text = message;
+            }
         }
     }
 }

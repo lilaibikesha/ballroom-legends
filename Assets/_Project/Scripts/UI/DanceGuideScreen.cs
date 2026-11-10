@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using BallroomLegends.Core;
 using BallroomLegends.Dance;
 using TMPro;
@@ -14,8 +16,6 @@ namespace BallroomLegends.UI
     ///   2. Dance list      - the 5 dances of that style
     ///   3. Dance detail    - history, characteristics, skills, tempo, video button
     ///   4. Style choice    - "Standard only" or "Latin only" -> Training Hall
-    ///
-    /// Wire buttons in the Inspector: Button > On Click () > drag this object > pick a method.
     /// </summary>
     public class DanceGuideScreen : MonoBehaviour
     {
@@ -48,10 +48,15 @@ namespace BallroomLegends.UI
 
         private void Start()
         {
+            if (library == null)
+            {
+                Debug.LogError("[DanceGuide] No DanceLibrary assigned. Drag Assets/_Project/Data/DanceLibrary into the 'Library' slot.");
+            }
+
             ShowStyleOverview();
         }
 
-        // ---------- Navigation (wire these to buttons) ----------
+        // ---------- Navigation (buttons call these) ----------
 
         public void ShowStyleOverview() => ShowOnly(styleOverviewPanel);
 
@@ -76,17 +81,38 @@ namespace BallroomLegends.UI
             _currentStyle = style;
             ShowOnly(danceListPanel);
 
-            // TODO (you):
-            //  1. Set danceListTitle.text to "Standard dances" or "Latin dances".
-            //  2. Get the dances: library.GetDances(style).
-            //  3. For each button i: if there is a dance i, show the button, set its label
-            //     (button.GetComponentInChildren<TMP_Text>().text) and make clicking it call
-            //     ShowDanceDetail(thatDance). Hide buttons that have no dance.
-            //     - Code clicks: button.onClick.RemoveAllListeners(); then
-            //       button.onClick.AddListener(() => ShowDanceDetail(dance));
-            //     - Why RemoveAllListeners first? (Open Standard, go back, open it again...)
-            //     - Classic C# trap: capturing the loop variable `i` inside the lambda.
-            //       Copy the dance into a local variable inside the loop and capture that.
+            SetText(danceListTitle, style == DanceStyle.Latin ? "Latin dances" : "Standard dances");
+
+            List<DanceInfo> dances = library != null ? library.GetDances(style) : new List<DanceInfo>();
+
+            for (int i = 0; i < danceButtons.Length; i++)
+            {
+                Button button = danceButtons[i];
+                if (button == null)
+                {
+                    continue;
+                }
+
+                // Remove the listeners from last time. Without this, opening Standard, going
+                // back and opening Latin would leave BOTH dances attached to the same button.
+                // (RemoveAllListeners only removes listeners added from code, not Inspector ones.)
+                button.onClick.RemoveAllListeners();
+
+                bool hasDance = i < dances.Count;
+                button.gameObject.SetActive(hasDance);
+                if (!hasDance)
+                {
+                    continue;
+                }
+
+                // Copy into a local variable INSIDE the loop and capture that in the lambda.
+                // If the lambda used dances[i] directly, it would capture the variable i, and
+                // every button would read i's value at click time (5, past the end of the list).
+                DanceInfo dance = dances[i];
+
+                SetText(button.GetComponentInChildren<TMP_Text>(), dance.DisplayName);
+                button.onClick.AddListener(() => ShowDanceDetail(dance));
+            }
         }
 
         private void ShowDanceDetail(DanceInfo dance)
@@ -94,16 +120,23 @@ namespace BallroomLegends.UI
             _currentDance = dance;
             ShowOnly(danceDetailPanel);
 
-            // TODO (you): fill the texts from `dance`:
-            //  - danceNameText: dance.DisplayName
-            //  - originText: "Origin: " + dance.Origin
-            //  - historyText: dance.History
-            //  - musicText: e.g. "3/4 time, 28-30 bars per minute" (TimeSignature, TempoMin/Max...)
-            //    Bonus: also show difficulty as stars, e.g. new string('*', dance.Difficulty).
-            //  - characteristicsText / skillsText: one bullet per line.
-            //    Hint: string.Join("\n", ...) or a StringBuilder.
-            //  - Video: if dance.HasVideo, label "Watch video" and button interactable;
-            //    otherwise label "Video coming soon" and videoButton.interactable = false.
+            SetText(danceNameText, dance.DisplayName);
+            SetText(originText, $"Origin: {dance.Origin}");
+            SetText(historyText, dance.History);
+            SetText(musicText,
+                $"<b>Music</b>\n{dance.TimeSignature} time, {dance.TempoMinBarsPerMinute}-{dance.TempoMaxBarsPerMinute} bars per minute\n" +
+                $"Difficulty: {dance.Difficulty} / 5");
+            SetText(characteristicsText, "<b>What it feels like</b>\n" + ToBulletList(dance.Characteristics));
+            SetText(skillsText, "<b>Skills you need</b>\n" + ToBulletList(dance.Skills));
+
+            // The video button is always visible. Until a clip is assigned in the
+            // DanceInfo asset it's greyed out (interactable = false).
+            if (videoButton != null)
+            {
+                videoButton.interactable = dance.HasVideo;
+            }
+
+            SetText(videoButtonLabel, dance.HasVideo ? "Watch video" : "Video coming soon");
         }
 
         public void PlayVideo()
@@ -121,11 +154,20 @@ namespace BallroomLegends.UI
 
         private void ChooseStyle(DanceStyle style)
         {
-            // TODO (you):
-            //  1. Save it: GameManager.Instance.SetChosenStyle(style).
-            //  2. Go to the training hall: GameManager.Instance.ChangeState(GameState.TrainingHall).
-            //  Remember the debugging exercise: what if GameManager.Instance is null here?
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager == null)
+            {
+                Debug.LogError("[DanceGuide] No GameManager.");
+                return;
+            }
+
+            if (gameManager.SetChosenStyle(style))
+            {
+                gameManager.ChangeState(GameState.TrainingHall);
+            }
         }
+
+        // ---------- Helpers ----------
 
         /// <summary>Shows one panel and hides the other three.</summary>
         private void ShowOnly(GameObject panelToShow)
@@ -138,6 +180,29 @@ namespace BallroomLegends.UI
                 {
                     panel.SetActive(panel == panelToShow);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Builds "- item" lines. StringBuilder avoids creating a new string for every "+",
+        /// which matters in loops (strings in C# are immutable).
+        /// </summary>
+        private static string ToBulletList(IReadOnlyList<string> items)
+        {
+            var builder = new StringBuilder();
+            foreach (string item in items)
+            {
+                builder.Append("- ").AppendLine(item);
+            }
+
+            return builder.ToString();
+        }
+
+        private static void SetText(TMP_Text target, string value)
+        {
+            if (target != null)
+            {
+                target.text = value;
             }
         }
     }

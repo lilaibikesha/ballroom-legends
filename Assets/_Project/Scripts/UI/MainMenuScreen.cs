@@ -4,13 +4,22 @@ using UnityEngine;
 namespace BallroomLegends.UI
 {
     /// <summary>
-    /// Main menu. Wire the "Start Game" button's On Click () to <see cref="StartGame"/>.
+    /// Main menu. The "Start Game" button's On Click () calls <see cref="StartGame"/>.
     /// </summary>
     public class MainMenuScreen : MonoBehaviour
     {
         public void StartGame()
         {
-            // TODO (you): ask the GameManager to move to GameState.CharacterSelection.
+            // Note: we compare with null explicitly instead of using "?.".
+            // Unity overrides == for its objects (a destroyed object == null), and "?."
+            // skips that override, so explicit checks are the safe habit in Unity.
+            if (GameManager.Instance == null)
+            {
+                Debug.LogError("[MainMenu] No GameManager.");
+                return;
+            }
+
+            GameManager.Instance.ChangeState(GameState.CharacterSelection);
         }
 
         public void QuitGame()

@@ -15,16 +15,38 @@ namespace BallroomLegends.Player
         /// <summary>Removes spaces at the start and end. Null becomes an empty string.</summary>
         public static string Clean(string rawName)
         {
-            // TODO (you): handle null, then trim. Hint: string.Trim().
-            return rawName ?? string.Empty;
+            // The null check comes first: calling .Trim() on null would throw a
+            // NullReferenceException.
+            return rawName == null ? string.Empty : rawName.Trim();
+        }
+
+        /// <summary>
+        /// Returns a message for the player if the name is not allowed, or null if it's fine.
+        /// One method owns all the rules, so IsValid and the UI can never disagree.
+        /// </summary>
+        public static string GetError(string rawName)
+        {
+            string name = Clean(rawName);
+
+            if (name.Length == 0)
+            {
+                return "Please type your name.";
+            }
+
+            if (name.Length < MinLength)
+            {
+                return $"Your name needs at least {MinLength} letters.";
+            }
+
+            if (name.Length > MaxLength)
+            {
+                return $"Your name can have at most {MaxLength} letters.";
+            }
+
+            return null;
         }
 
         /// <summary>True if the cleaned name is between MinLength and MaxLength characters.</summary>
-        public static bool IsValid(string rawName)
-        {
-            // TODO (you): clean the name first, then check the length rules.
-            // Stretch: should "   " (only spaces) be valid? Should digits be allowed?
-            return false;
-        }
+        public static bool IsValid(string rawName) => GetError(rawName) == null;
     }
 }

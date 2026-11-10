@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
-using BallroomLegends.Characters;
 using BallroomLegends.Core;
 using BallroomLegends.Dance;
 using BallroomLegends.Tournament;
-using BallroomLegends.Training;
-using BallroomLegends.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -20,12 +17,17 @@ namespace BallroomLegends.EditorTools
     public static class ProjectSetupMenu
     {
         private const string ScenesFolder = "Assets/_Project/Scenes";
-        private const string DanceLibraryPath = "Assets/_Project/Data/DanceLibrary.asset";
 
         [MenuItem("Ballroom Legends/Create Initial Scenes")]
         public static void CreateInitialScenes()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
+
+            // The screens use TextMeshPro, which needs its essential resources first.
+            if (!UiBuilder.EnsureTmpEssentials())
             {
                 return;
             }
@@ -75,23 +77,21 @@ namespace BallroomLegends.EditorTools
 
         private static void AddSceneObjects(string sceneName)
         {
+            // No GameManager here: it creates itself when you press Play (see
+            // GameManager.CreateOnStartup), so every scene can be played on its own.
             switch (sceneName)
             {
                 case SceneNames.MainMenu:
-                    new GameObject("GameManager").AddComponent<GameManager>();
-                    new GameObject("MainMenuScreen").AddComponent<MainMenuScreen>();
+                    ScreenBuilders.BuildMainMenu();
                     break;
                 case SceneNames.CharacterSelection:
-                    new GameObject("CharacterSelection").AddComponent<CharacterSelection>();
+                    ScreenBuilders.BuildCharacterSelection();
                     break;
                 case SceneNames.DanceGuide:
-                {
-                    var guide = new GameObject("DanceGuideScreen").AddComponent<DanceGuideScreen>();
-                    AssignDanceLibrary(guide);
+                    ScreenBuilders.BuildDanceGuide();
                     break;
-                }
                 case SceneNames.TrainingHall:
-                    new GameObject("TrainingHallScreen").AddComponent<TrainingHallScreen>();
+                    ScreenBuilders.BuildTrainingHall();
                     break;
                 case SceneNames.BlackpoolBallroom:
                     new GameObject("DanceManager").AddComponent<DanceManager>();
@@ -101,25 +101,6 @@ namespace BallroomLegends.EditorTools
                     // Empty for now: you'll build the results UI here.
                     break;
             }
-        }
-
-        /// <summary>
-        /// Fills the private [SerializeField] "library" field, exactly like dragging the
-        /// DanceLibrary asset into the Inspector slot by hand. SerializedObject is how editor
-        /// code edits serialized fields.
-        /// </summary>
-        private static void AssignDanceLibrary(DanceGuideScreen guide)
-        {
-            var library = AssetDatabase.LoadAssetAtPath<DanceLibrary>(DanceLibraryPath);
-            if (library == null)
-            {
-                Debug.LogWarning($"[Setup] {DanceLibraryPath} not found. Assign the library by hand.");
-                return;
-            }
-
-            var serialized = new SerializedObject(guide);
-            serialized.FindProperty("library").objectReferenceValue = library;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }
 }

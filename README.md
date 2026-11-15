@@ -19,17 +19,24 @@ with the music, and impress the judges round after round to win the championship
 - [x] Simple tournament: 48 couples, 5 judges, recalls through Heat, Quarter-final,
       Semi-final and Final
 - [x] Results screen
+- [x] Full Blackpool rounds: every round has all 5 dances of your style; judges mark each
+      dance and the totals decide the recalls. Fast dances (Quickstep, Viennese Waltz, Jive)
+      step on every 2nd or 3rd beat
+- [x] Dancers on the floor: your heat of up to 12 couples (you in gold), Standard couples
+      travel the line of dance and Latin couples dance on the spot, 5 judges holding up
+      mark paddles, an audience that cheers
 
 Code is written but still needs a first run in Unity: see `docs/COMPETITION.md` > Try it.
 
-Later: outfit and appearance customization, more dances (Tango, Foxtrot, Quickstep,
-Viennese Waltz), Skating System judging, partner AI, music library.
+Later: real sprites and animation, outfit and appearance customization, real step
+patterns (Tango's slow-slow-quick-quick-slow), Skating System judging, career mode,
+partner AI, music library.
 
 ## Tech stack
 
 | Area | Choice |
 | --- | --- |
-| Engine | Unity 6.3 LTS (6000.3.x), Universal 2D template (URP) |
+| Engine | Unity 6 (created with 6000.3 LTS; newer 6.x versions upgrade it), Universal 2D template (URP) |
 | Language | C# |
 | Editor | Visual Studio Code + Unity extension (C# Dev Kit) |
 | Version control | Git + GitHub |
@@ -38,12 +45,12 @@ Viennese Waltz), Skating System judging, partner AI, music library.
 
 ## Getting started
 
-1. Install Unity Hub and Unity **6000.3.x LTS** (the exact version is in
-   `ProjectSettings/ProjectVersion.txt`).
+1. Install Unity Hub and a Unity 6 editor (the project was created with the version in
+   `ProjectSettings/ProjectVersion.txt`; a newer 6.x opens it after an upgrade prompt).
 2. Clone the repo: `git clone https://github.com/lilaibikesha/ballroom-legends.git`
 3. In Unity Hub: **Add > Add project from disk** and pick the cloned folder.
 4. First time only: menu **Ballroom Legends > Create Initial Scenes** (creates the 6 scenes).
-   Already ran it before the competition milestone? Run **Ballroom Legends > Rebuild Competition Scenes** once.
+   Already ran it before the latest competition update? Run **Ballroom Legends > Rebuild Competition Scenes** once.
 5. Open `Assets/_Project/Scenes/MainMenu.unity` and press Play.
 6. Run tests: **Window > General > Test Runner > EditMode > Run All**.
 
@@ -66,7 +73,8 @@ Assets/
       Tournament/           TournamentManager, TournamentRules, JudgePanel, CompetitorField,
                             Couple, RoundType, RandomUtil
       Competition/          CompetitionController (ballroom scene), CompetitionResult,
-                            RoundReport, RankingEntry, TextFormat
+                            RoundProgramme, RoundReport, DanceReport, RankingEntry, TextFormat
+      Floor/                BallroomFloor, CoupleView, CoupleLook, FloorLayout, FloorShapes
     Editor/                 Editor-only tools (BallroomLegends.Editor.asmdef)
     Tests/EditMode/         Unit tests (BallroomLegends.Tests.EditMode.asmdef)
     Sprites/                Characters, Ballroom, UI
@@ -90,7 +98,9 @@ ProjectSettings/            Unity project settings (tracked)
 | `RhythmMath` / `PerformanceTracker` | Pure timing math, and the Perfect / Good / Miss counts and 0-100 score. |
 | `TournamentManager` | Registers couples, stores judges' marks, ranks, recalls the best to the next round. |
 | `JudgePanel` / `CompetitorField` | Turns a dance into judges' marks; creates the 47 AI couples. |
-| `CompetitionController` | Ballroom scene director: connects the dance, the tournament and the UI. |
+| `CompetitionController` | Ballroom scene director: runs the 5 dances of each round, connects the dance, the tournament, the floor and the UI. |
+| `BallroomFloor` / `CoupleView` | Draws your heat of couples, the judges and the audience, and animates them on the beat. |
+| `FloorLayout` / `RoundProgramme` | Pure helpers: floor geometry and heats; which dances a round has. |
 | `ResultsScreen` | Shows the competition, round by round. |
 
 Game flow: `MainMenu -> CharacterSelection -> DanceGuide -> TrainingHall -> BlackpoolBallroom (Dancing) -> Results`

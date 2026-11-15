@@ -10,6 +10,10 @@ namespace BallroomLegends.Tournament
     /// ranks couples and recalls the best ones to the next round.
     ///
     /// Round sizes follow <see cref="TournamentRules.CouplesInRound"/>: 48, 24, 12, Final of 6.
+    ///
+    /// Like the real Blackpool Festival, a round can have several dances (all five of the
+    /// style). Each dance adds one mark per judge with <see cref="AddDanceScores"/>, and the
+    /// ranking uses the total over every dance of the round.
     /// </summary>
     public class TournamentManager : MonoBehaviour
     {
@@ -20,8 +24,12 @@ namespace BallroomLegends.Tournament
         // In start-number order (the order they registered). Ties are broken by this order.
         private readonly List<Couple> _couples = new();
 
-        // Marks for the current round: each couple -> one mark per judge.
+        // Marks for the current round: each couple -> one mark per judge, for every dance
+        // danced so far (5 judges x 3 dances = 15 marks).
         private readonly Dictionary<Couple, List<int>> _scores = new();
+
+        // How many dances of the current round each couple has been marked for.
+        private readonly Dictionary<Couple, int> _dancesMarked = new();
 
         public RoundType CurrentRound { get; private set; } = RoundType.Heat;
         public bool IsFinished { get; private set; }
@@ -44,6 +52,7 @@ namespace BallroomLegends.Tournament
         {
             _couples.Clear();
             _scores.Clear();
+            _dancesMarked.Clear();
             CurrentRound = RoundType.Heat;
             IsFinished = false;
         }
@@ -72,8 +81,54 @@ namespace BallroomLegends.Tournament
             return true;
         }
 
-        /// <summary>Stores one mark per judge for a couple. Submitting again replaces the old marks.</summary>
+        /// <summary>
+        /// Stores one mark per judge for a couple, for a one-dance round. Submitting again
+        /// replaces the old marks (including marks from other dances).
+        /// </summary>
         public bool SubmitScores(Couple couple, IReadOnlyList<int> judgeScores)
+        {
+            if (!AreValidMarks(couple, judgeScores))
+            {
+                return false;
+            }
+
+            // Store a copy, so the caller changing its list later can't change our data.
+            _scores[couple] = new List<int>(judgeScores);
+            _dancesMarked[couple] = 1;
+            return true;
+        }
+
+        /// <summary>
+        /// Adds the judges' marks for one more dance of the round (Waltz, then Tango, ...).
+        /// The couple's total grows with every dance.
+        /// </summary>
+        public bool AddDanceScores(Couple couple, IReadOnlyList<int> judgeScores)
+        {
+            if (!AreValidMarks(couple, judgeScores))
+            {
+                return false;
+            }
+
+            if (_scores.TryGetValue(couple, out List<int> marks))
+            {
+                marks.AddRange(judgeScores);
+                _dancesMarked[couple]++;
+            }
+            else
+            {
+                _scores[couple] = new List<int>(judgeScores);
+                _dancesMarked[couple] = 1;
+            }
+
+            return true;
+        }
+
+        /// <summary>How many dances of the current round this couple has marks for.</summary>
+        public int GetDancesMarked(Couple couple) =>
+            couple != null && _dancesMarked.TryGetValue(couple, out int count) ? count : 0;
+
+        /// <summary>Guard clauses shared by SubmitScores and AddDanceScores.</summary>
+        private bool AreValidMarks(Couple couple, IReadOnlyList<int> judgeScores)
         {
             if (IsFinished)
             {
@@ -102,8 +157,6 @@ namespace BallroomLegends.Tournament
                 }
             }
 
-            // Store a copy, so the caller changing its list later can't change our data.
-            _scores[couple] = new List<int>(judgeScores);
             return true;
         }
 
@@ -172,6 +225,7 @@ namespace BallroomLegends.Tournament
             // RemoveAll keeps the survivors in start-number order.
             _couples.RemoveAll(couple => !recalled.Contains(couple));
             _scores.Clear();
+            _dancesMarked.Clear();
             CurrentRound = TournamentRules.Next(CurrentRound);
             Debug.Log($"[Tournament] {_couples.Count} couples recalled to the {CurrentRound}.");
         }

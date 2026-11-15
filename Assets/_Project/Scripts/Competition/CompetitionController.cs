@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using BallroomLegends.Core;
 using BallroomLegends.Dance;
+using BallroomLegends.Floor;
 using BallroomLegends.Tournament;
 using TMPro;
 using UnityEngine;
@@ -10,30 +11,39 @@ using UnityEngine.EventSystems;
 namespace BallroomLegends.Competition
 {
     /// <summary>
-    /// The Blackpool Ballroom scene's director. It connects the two systems and the UI:
+    /// The Blackpool Ballroom scene's director. It connects the systems and the UI.
     ///
-    ///   Intro panel --Dance!--> DanceManager runs the routine (HUD shows beats + feedback)
-    ///        ^                         |
-    ///        |                   DanceFinished
-    ///   Continue                       v
-    ///        |       judges mark every couple, TournamentManager ranks them
-    ///        +------ Round result panel --(eliminated or Final done)--> Results scene
+    /// Like the real festival, every round has all five dances of your style:
     ///
-    /// DanceManager knows nothing about tournaments and TournamentManager knows nothing
-    /// about rhythm. Only this class knows both ("separation of concerns").
+    ///   Intro panel --Dance!--> dance 1 (HUD) --> dance break --Next--> dance 2 ... dance 5
+    ///        ^                                                                 |
+    ///        |                                       judges' totals rank every couple
+    ///   Continue                                                               v
+    ///        +----------- Round result panel --(eliminated or Final done)--> Results scene
+    ///
+    /// After every dance the judges mark every couple for that dance; the round's ranking
+    /// is the total of all the dances. DanceManager knows nothing about tournaments,
+    /// TournamentManager knows nothing about rhythm and BallroomFloor only draws. Only this
+    /// class knows them all ("separation of concerns").
     /// </summary>
     public class CompetitionController : MonoBehaviour
     {
         [Header("Systems")]
         [SerializeField] private DanceManager danceManager;
         [SerializeField] private TournamentManager tournamentManager;
-        [Tooltip("Used to pick the competition dance for the chosen style (Waltz for Standard, Samba for Latin).")]
+        [Tooltip("Where the dances of your style come from (Waltz, Tango, ... or Samba, Cha Cha Cha, ...).")]
         [SerializeField] private DanceLibrary library;
+        [Tooltip("Draws the couples, judges and audience. Optional: the competition works without it.")]
+        [SerializeField] private BallroomFloor floor;
+
+        [Header("Programme")]
+        [Tooltip("Dances in every round. 5 = the real thing. Lower it to test faster.")]
+        [SerializeField, Range(1, 5)] private int dancesPerRound = 5;
 
         [Header("Field")]
         [SerializeField, Range(0f, 100f)] private float aiMinSkill = 45f;
         [SerializeField, Range(0f, 100f)] private float aiMaxSkill = 88f;
-        [Tooltip("How much an AI couple's level changes from round to round (standard deviation, in skill points).")]
+        [Tooltip("How much an AI couple's level changes from dance to dance (standard deviation, in skill points).")]
         [SerializeField, Min(0f)] private float aiFormVariation = 3f;
         [Tooltip("How much the judges disagree (standard deviation, in marks).")]
         [SerializeField, Min(0f)] private float judgeDisagreement = 0.8f;
@@ -43,6 +53,7 @@ namespace BallroomLegends.Competition
         [Header("Panels (one visible at a time)")]
         [SerializeField] private GameObject introPanel;
         [SerializeField] private GameObject hudPanel;
+        [SerializeField] private GameObject danceBreakPanel;
         [SerializeField] private GameObject roundResultPanel;
 
         [Header("Intro")]
@@ -50,17 +61,16 @@ namespace BallroomLegends.Competition
         [SerializeField] private TMP_Text introText;
 
         [Header("HUD")]
+        [SerializeField] private TMP_Text danceTitleText;
         [SerializeField] private TMP_Text countText;
         [SerializeField] private TMP_Text feedbackText;
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private RectTransform beatPulse;
 
-        [Header("Floor")]
-        [Tooltip("Your couple's marker. It travels around the floor (the line of dance) with every good step.")]
-        [SerializeField] private RectTransform coupleMarker;
-        [SerializeField] private Vector2 floorCenter = new Vector2(0f, -60f);
-        [SerializeField] private Vector2 floorRadius = new Vector2(640f, 250f);
-        [SerializeField, Min(4)] private int stepsPerLap = 24;
+        [Header("Dance break (between two dances)")]
+        [SerializeField] private TMP_Text breakTitleText;
+        [SerializeField] private TMP_Text breakBodyText;
+        [SerializeField] private TMP_Text breakButtonLabel;
 
         [Header("Round result")]
         [SerializeField] private TMP_Text resultTitleText;
@@ -75,10 +85,16 @@ namespace BallroomLegends.Competition
         private System.Random _random;
         private JudgePanel _judges;
         private Couple _player;
+        private DanceStyle _style;
         private CompetitionResult _result;
         private bool _competitionOver;
-        private int _stepsTravelled;
         private float _pulse;
+
+        // The dances of every round. A null entry means "the DanceManager's own settings"
+        // (only when no DanceLibrary is assigned).
+        private List<DanceInfo> _programme = new List<DanceInfo>();
+        private int _danceIndex;
+        private RoundReport _round;
 
         private void OnEnable()
         {
@@ -114,13 +130,15 @@ namespace BallroomLegends.Competition
             _random = randomSeed == 0 ? new System.Random() : new System.Random(randomSeed);
             _judges = new JudgePanel(_random, judgeDisagreement);
 
-            DanceInfo dance = PickDance();
-            if (dance != null)
+            GameManager gameManager = GameManager.Instance;
+            _style = gameManager != null ? gameManager.ChosenStyle : DanceStyle.None;
+            if (_style == DanceStyle.None)
             {
-                danceManager.Configure(dance);
+                _style = DanceStyle.Standard; // Pressing Play straight in this scene.
             }
 
-            GameManager gameManager = GameManager.Instance;
+            _programme = BuildProgramme();
+
             string playerName = gameManager != null && !string.IsNullOrEmpty(gameManager.PlayerName)
                 ? gameManager.PlayerName
                 : "You";
@@ -128,48 +146,53 @@ namespace BallroomLegends.Competition
 
             SetUpField();
 
+            List<string> danceNames = ProgrammeNames();
             _result = new CompetitionResult
             {
-                DanceName = danceManager.DanceName,
+                StyleName = _style.ToString(),
+                DanceNames = danceNames,
+                DanceName = $"{_style}: {RoundProgramme.Describe(danceNames)}",
                 PlayerCoupleName = _player.Name,
                 FieldSize = tournamentManager.Couples.Count
             };
 
-            MoveMarker(instant: true);
             ShowIntro();
         }
 
         private void Update()
         {
-            // The pulse circle "pops" on every beat and shrinks back.
+            // The pulse circle "pops" on every step and shrinks back.
             _pulse = Mathf.MoveTowards(_pulse, 0f, Time.deltaTime * 4f);
             if (beatPulse != null)
             {
                 beatPulse.localScale = Vector3.one * (1f + 0.35f * _pulse);
             }
-
-            MoveMarker(instant: false);
         }
 
         // ---------- Setup ----------
 
-        /// <summary>The first dance of the chosen style opens the competition: Waltz or Samba.</summary>
-        private DanceInfo PickDance()
+        /// <summary>All five dances of the chosen style, in competition order.</summary>
+        private List<DanceInfo> BuildProgramme()
         {
-            if (library == null)
+            List<DanceInfo> styleDances = library != null ? library.GetDances(_style) : new List<DanceInfo>();
+            if (styleDances.Count == 0)
             {
-                return null; // DanceManager keeps its own Waltz values.
+                Debug.LogWarning("[Competition] No dances found for the style. Using the DanceManager's own Waltz.");
+                return new List<DanceInfo> { null };
             }
 
-            GameManager gameManager = GameManager.Instance;
-            DanceStyle style = gameManager != null ? gameManager.ChosenStyle : DanceStyle.None;
-            if (style == DanceStyle.None)
+            return RoundProgramme.Pick(styleDances, dancesPerRound);
+        }
+
+        private List<string> ProgrammeNames()
+        {
+            var names = new List<string>();
+            foreach (DanceInfo dance in _programme)
             {
-                style = DanceStyle.Standard;
+                names.Add(dance != null ? dance.DisplayName : danceManager.DanceName);
             }
 
-            List<DanceInfo> dances = library.GetDances(style);
-            return dances.Count > 0 ? dances[0] : null;
+            return names;
         }
 
         private void SetUpField()
@@ -189,33 +212,86 @@ namespace BallroomLegends.Competition
             }
         }
 
-        // ---------- Intro ----------
+        // ---------- Intro (before each round) ----------
 
         private void ShowIntro()
         {
             RoundType round = tournamentManager.CurrentRound;
             ShowOnly(introPanel);
 
-            SetText(roundTitleText, $"{TournamentRules.DisplayName(round)}: {danceManager.DanceName}");
+            int couples = tournamentManager.Couples.Count;
+            if (floor != null)
+            {
+                floor.SetUpRound(tournamentManager.Couples, _player, _style, tournamentManager.NumberOfJudges, _random);
+            }
+
+            SetText(roundTitleText, $"{TournamentRules.DisplayName(round)}: {_style}");
 
             string recall = TournamentRules.IsLastRound(round)
                 ? "The judges will place all six finalists."
                 : $"The best {tournamentManager.CouplesAdvancingFromCurrentRound} are recalled to the " +
                   $"{TournamentRules.DisplayName(TournamentRules.Next(round))}.";
 
+            int capacity = floor != null ? floor.FloorCapacity : couples;
+            int heats = FloorLayout.HeatCount(couples, capacity);
+            string heatLine = heats > 1
+                ? $"{couples} couples, dancing in {heats} heats of up to {capacity}."
+                : $"{couples} couples on the floor.";
+
+            string dances = _programme.Count == 1
+                ? $"One dance: {RoundProgramme.Describe(ProgrammeNames())}."
+                : $"{_programme.Count} dances: {RoundProgramme.Describe(ProgrammeNames())}. Your marks from all of them are added up.";
+
             SetText(introText,
-                $"{tournamentManager.Couples.Count} couples on the floor. {recall}\n\n" +
-                $"Press <b>SPACE</b> on every beat: {CountPattern()}.\n" +
-                $"Listen to the {danceManager.CountInBeats}-beat count-in, then dance {danceManager.StepCount} steps " +
-                $"({danceManager.BeatsPerMinute:0} beats per minute).");
+                $"{heatLine} {recall}\n\n" +
+                $"{dances}\n" +
+                "Press <b>SPACE</b> on every lit beat. Fast dances step on every 2nd or 3rd beat: listen for the loud clicks.");
         }
 
-        /// <summary>The "Dance!" button.</summary>
+        /// <summary>The "Dance!" button: the first dance of the round.</summary>
         public void BeginRound()
         {
+            _round = new RoundReport
+            {
+                Round = tournamentManager.CurrentRound,
+                CouplesInRound = tournamentManager.Couples.Count
+            };
+            _danceIndex = 0;
+            StartCurrentDance();
+        }
+
+        /// <summary>The "Next: Tango" button on the dance break panel.</summary>
+        public void NextDance()
+        {
+            if (_round == null || _danceIndex >= _programme.Count - 1)
+            {
+                return;
+            }
+
+            _danceIndex++;
+            StartCurrentDance();
+        }
+
+        private void StartCurrentDance()
+        {
+            DanceInfo dance = _programme[_danceIndex];
+            if (dance != null)
+            {
+                danceManager.Configure(dance);
+            }
+
             ShowOnly(hudPanel);
+            SetText(danceTitleText,
+                $"{TournamentRules.DisplayName(tournamentManager.CurrentRound)}  -  {danceManager.DanceName}  " +
+                $"<size=70%>(dance {_danceIndex + 1} of {_programme.Count})</size>");
             SetText(feedbackText, string.Empty);
             SetText(countText, "Listen...");
+
+            if (floor != null)
+            {
+                floor.SetDancing(true);
+            }
+
             danceManager.StartDance();
             UpdateScore();
         }
@@ -224,16 +300,22 @@ namespace BallroomLegends.Competition
 
         private void OnBeat(int songBeat, int beatInBar)
         {
-            if (songBeat < danceManager.CountInBeats)
+            bool countIn = songBeat < danceManager.CountInBeats;
+            bool isStep = danceManager.IsStepBeat(songBeat);
+
+            SetText(countText, countIn
+                ? $"Get ready... {danceManager.CountInBeats - songBeat}"
+                : CountLine(beatInBar));
+
+            if (countIn || isStep)
             {
-                SetText(countText, $"Get ready... {danceManager.CountInBeats - songBeat}");
-            }
-            else
-            {
-                SetText(countText, CountLine(beatInBar));
+                _pulse = beatInBar == 0 ? 1.4f : 0.8f;
             }
 
-            _pulse = beatInBar == 0 ? 1.4f : 0.8f;
+            if (floor != null)
+            {
+                floor.OnBeat(isStep, beatInBar == 0);
+            }
         }
 
         private void OnStepJudged(HitResult result, float offset)
@@ -252,10 +334,9 @@ namespace BallroomLegends.Competition
                     break;
             }
 
-            // The couple only travels when the step was danced.
-            if (result != HitResult.Miss)
+            if (floor != null)
             {
-                _stepsTravelled++;
+                floor.OnPlayerStep(result);
             }
 
             UpdateScore();
@@ -263,10 +344,15 @@ namespace BallroomLegends.Competition
 
         private void OnDanceFinished(PerformanceTracker tracker)
         {
-            RoundType round = tournamentManager.CurrentRound;
+            if (floor != null)
+            {
+                floor.SetDancing(false);
+            }
+
+            // Your dance score is your level for this dance.
             _player.Skill = tracker.Score;
 
-            // Every couple dances at the same time; the judges mark them all.
+            // Every couple dances at the same time; the judges mark them all for this dance.
             int[] playerMarks = new int[0];
             foreach (Couple couple in tournamentManager.Couples)
             {
@@ -275,7 +361,7 @@ namespace BallroomLegends.Competition
                     : couple.Skill + (float)(RandomUtil.NextGaussian(_random) * aiFormVariation);
 
                 int[] marks = _judges.Score(level, tournamentManager.NumberOfJudges);
-                tournamentManager.SubmitScores(couple, marks);
+                tournamentManager.AddDanceScores(couple, marks);
 
                 if (couple.IsPlayer)
                 {
@@ -283,33 +369,89 @@ namespace BallroomLegends.Competition
                 }
             }
 
-            List<Couple> ranking = tournamentManager.GetRanking();
-            int place = ranking.IndexOf(_player) + 1;
-            bool isFinal = TournamentRules.IsLastRound(round);
-            bool recalled = !isFinal && place <= tournamentManager.CouplesAdvancingFromCurrentRound;
-
-            var report = new RoundReport
+            var danceReport = new DanceReport
             {
-                Round = round,
-                CouplesInRound = ranking.Count,
-                Place = place,
-                Recalled = recalled,
-                DanceScore = tracker.Score,
+                DanceName = danceManager.DanceName,
+                Score = tracker.Score,
                 Perfect = tracker.PerfectCount,
                 Good = tracker.GoodCount,
                 Miss = tracker.MissCount,
                 MaxCombo = tracker.MaxCombo,
                 Marks = playerMarks
             };
+            _round.AddDance(danceReport);
 
-            _result.Rounds.Add(report);
-            _result.LastRoundTop = TopOf(ranking);
-            _competitionOver = isFinal || !recalled;
+            if (floor != null)
+            {
+                floor.ShowJudgeMarks(playerMarks);
+            }
 
-            ShowRoundResult(report);
+            if (_danceIndex < _programme.Count - 1)
+            {
+                ShowDanceBreak(danceReport);
+            }
+            else
+            {
+                FinishRound();
+            }
+        }
+
+        // ---------- Between two dances ----------
+
+        private void ShowDanceBreak(DanceReport dance)
+        {
+            ShowOnly(danceBreakPanel);
+
+            SetText(breakTitleText, $"{dance.DanceName}: {dance.Score:0}/100");
+
+            int place = tournamentManager.GetPlace(_player);
+            var body = new StringBuilder();
+            body.AppendLine($"{dance.Perfect} perfect, {dance.Good} good, {dance.Miss} miss, best combo {dance.MaxCombo}");
+            body.AppendLine($"Judges' marks: {string.Join("  ", dance.Marks)}  =  <b>{dance.TotalMarks}</b>");
+            body.AppendLine();
+            body.AppendLine($"After {_danceIndex + 1} of {_programme.Count} dances you're " +
+                            $"<color={Gold}><b>{TextFormat.Ordinal(place)}</b></color> of {tournamentManager.Couples.Count}.");
+
+            if (!TournamentRules.IsLastRound(tournamentManager.CurrentRound))
+            {
+                int recalled = tournamentManager.CouplesAdvancingFromCurrentRound;
+                body.AppendLine(place <= recalled
+                    ? $"That's inside the top {recalled}: keep it up!"
+                    : $"The top {recalled} are recalled. Time to push!");
+            }
+
+            SetText(breakBodyText, body.ToString());
+
+            DanceInfo next = _programme[_danceIndex + 1];
+            string nextName = next != null ? next.DisplayName : "next dance";
+            SetText(breakButtonLabel, $"Next: {nextName}");
         }
 
         // ---------- Round result ----------
+
+        private void FinishRound()
+        {
+            RoundType round = tournamentManager.CurrentRound;
+            List<Couple> ranking = tournamentManager.GetRanking();
+            int place = ranking.IndexOf(_player) + 1;
+            bool isFinal = TournamentRules.IsLastRound(round);
+            bool recalled = !isFinal && place <= tournamentManager.CouplesAdvancingFromCurrentRound;
+
+            _round.CouplesInRound = ranking.Count;
+            _round.Place = place;
+            _round.Recalled = recalled;
+
+            _result.Rounds.Add(_round);
+            _result.LastRoundTop = TopOf(ranking);
+            _competitionOver = isFinal || !recalled;
+
+            if (floor != null && (recalled || (isFinal && place <= 3)))
+            {
+                floor.Cheer();
+            }
+
+            ShowRoundResult(_round);
+        }
 
         private void ShowRoundResult(RoundReport report)
         {
@@ -328,9 +470,12 @@ namespace BallroomLegends.Competition
             SetText(resultTitleText, title);
 
             var body = new StringBuilder();
-            body.AppendLine($"Your dance: <b>{report.DanceScore:0}/100</b>   " +
-                            $"({report.Perfect} perfect, {report.Good} good, {report.Miss} miss, best combo {report.MaxCombo})");
-            body.AppendLine($"Judges' marks: {string.Join("  ", report.Marks)}  =  <b>{report.TotalMarks}</b>");
+            foreach (DanceReport dance in report.Dances)
+            {
+                body.AppendLine($"{dance.DanceName}: {dance.Score:0}/100, marks {string.Join(" ", dance.Marks)} = {dance.TotalMarks}");
+            }
+
+            body.AppendLine($"Total: <b>{report.TotalMarks}</b> marks   (average dance {report.DanceScore:0}/100, best combo {report.MaxCombo})");
             body.AppendLine($"Place: <b>{TextFormat.Ordinal(report.Place)}</b> of {report.CouplesInRound}");
 
             if (report.Recalled)
@@ -380,6 +525,11 @@ namespace BallroomLegends.Competition
         public void Withdraw()
         {
             danceManager.StopDance();
+            if (floor != null)
+            {
+                floor.SetDancing(false);
+            }
+
             ChangeState(GameState.TrainingHall);
         }
 
@@ -420,13 +570,16 @@ namespace BallroomLegends.Competition
             return top;
         }
 
-        /// <summary>"ONE two three" for Waltz, with the current beat highlighted in gold.</summary>
+        /// <summary>
+        /// "ONE two three" for Waltz, with the current beat in gold. Beats you don't step on
+        /// (fast dances) show as a dot: Quickstep is "ONE · three ·".
+        /// </summary>
         private string CountLine(int beatInBar)
         {
             var line = new StringBuilder();
             for (int i = 0; i < danceManager.BeatsPerBar; i++)
             {
-                string word = CountWords[Mathf.Min(i, CountWords.Length - 1)];
+                string word = IsStepInBar(i) ? CountWords[Mathf.Min(i, CountWords.Length - 1)] : "·";
                 line.Append(i == beatInBar ? $"<color={Gold}><b>{word}</b></color>" : $"<color={Dim}>{word}</color>");
                 line.Append("   ");
             }
@@ -434,16 +587,8 @@ namespace BallroomLegends.Competition
             return line.ToString().TrimEnd();
         }
 
-        private string CountPattern()
-        {
-            var words = new List<string>();
-            for (int i = 0; i < danceManager.BeatsPerBar; i++)
-            {
-                words.Add(CountWords[Mathf.Min(i, CountWords.Length - 1)]);
-            }
-
-            return string.Join(" - ", words);
-        }
+        /// <summary>The count-in is whole bars, so "step beats" are the same in every bar.</summary>
+        private bool IsStepInBar(int beatInBar) => beatInBar % danceManager.StepInterval == 0;
 
         private void UpdateScore()
         {
@@ -468,28 +613,11 @@ namespace BallroomLegends.Competition
             feedbackText.color = color;
         }
 
-        /// <summary>Places the marker on an ellipse; it glides there smoothly unless instant.</summary>
-        private void MoveMarker(bool instant)
-        {
-            if (coupleMarker == null)
-            {
-                return;
-            }
-
-            // Ballroom couples travel anticlockwise around the floor ("line of dance").
-            // Start at the bottom of the ellipse (-90 degrees) and go anticlockwise.
-            float angle = -Mathf.PI / 2f + _stepsTravelled * (2f * Mathf.PI / stepsPerLap);
-            Vector2 target = floorCenter + new Vector2(Mathf.Cos(angle) * floorRadius.x, Mathf.Sin(angle) * floorRadius.y);
-
-            coupleMarker.anchoredPosition = instant
-                ? target
-                : Vector2.Lerp(coupleMarker.anchoredPosition, target, 1f - Mathf.Exp(-10f * Time.deltaTime));
-        }
-
         private void ShowOnly(GameObject panel)
         {
             SetActive(introPanel, panel == introPanel);
             SetActive(hudPanel, panel == hudPanel);
+            SetActive(danceBreakPanel, panel == danceBreakPanel);
             SetActive(roundResultPanel, panel == roundResultPanel);
 
             // Forget which button was clicked last. Otherwise SPACE (the UI "submit" key)

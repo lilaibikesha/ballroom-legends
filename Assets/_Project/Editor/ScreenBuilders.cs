@@ -1,6 +1,7 @@
 using BallroomLegends.Characters;
 using BallroomLegends.Competition;
 using BallroomLegends.Dance;
+using BallroomLegends.Floor;
 using BallroomLegends.Player;
 using BallroomLegends.Tournament;
 using BallroomLegends.Training;
@@ -202,16 +203,21 @@ namespace BallroomLegends.EditorTools
             UiBuilder.CreateText(canvas, "Title", "Blackpool Ballroom", 72, new Vector2(0, 450), new Vector2(1600, 100)).color = UiBuilder.Gold;
             UiBuilder.CreateText(canvas, "Subtitle", "Winter Gardens, Blackpool", 30, new Vector2(0, 385), new Vector2(1600, 50));
 
-            RectTransform marker = UiBuilder.CreateCircle(canvas, "CoupleMarker", new Vector2(0, -310), new Vector2(96, 96), UiBuilder.Gold);
-            UiBuilder.CreateText(marker, "Label", "You", 26, Vector2.zero, new Vector2(96, 40)).color = Color.black;
+            // The couples, judges and audience. BallroomFloor creates them itself when you press
+            // Play, so in the editor this is just an empty full-screen object.
+            RectTransform stage = UiBuilder.CreateContainer(canvas, "FloorStage");
+            var floor = stage.gameObject.AddComponent<BallroomFloor>();
+            UiBuilder.SetField(controller, "floor", floor);
 
             // ----- HUD (visible while dancing) -----
             RectTransform hud = UiBuilder.CreateContainer(canvas, "HudPanel");
+            TMP_Text danceTitle = UiBuilder.CreateText(hud, "DanceTitle", "First Round - Waltz", 44, new Vector2(0, 235), new Vector2(1100, 64));
+            danceTitle.color = UiBuilder.Gold;
             TMP_Text countText = UiBuilder.CreateText(hud, "CountText", "Listen...", 96, new Vector2(0, 140), new Vector2(1400, 130));
             RectTransform pulse = UiBuilder.CreateCircle(hud, "BeatPulse", new Vector2(0, -40), new Vector2(150, 150), new Color(1f, 1f, 1f, 0.85f));
             TMP_Text feedbackText = UiBuilder.CreateText(hud, "FeedbackText", "", 64, new Vector2(0, -200), new Vector2(1200, 90));
             TMP_Text scoreText = UiBuilder.CreateText(hud, "ScoreText", "", 34, new Vector2(560, 210), new Vector2(480, 110), TextAlignmentOptions.TopRight);
-            UiBuilder.CreateText(hud, "Hint", "Press SPACE on every beat", 28, new Vector2(-560, 210), new Vector2(480, 60), TextAlignmentOptions.TopLeft);
+            UiBuilder.CreateText(hud, "Hint", "Press SPACE on every lit beat", 28, new Vector2(-560, 210), new Vector2(480, 60), TextAlignmentOptions.TopLeft);
 
             // ----- Intro panel (before each round) -----
             RectTransform intro = UiBuilder.CreateContainer(canvas, "IntroPanel");
@@ -221,6 +227,18 @@ namespace BallroomLegends.EditorTools
             TMP_Text introText = UiBuilder.CreateText(intro, "IntroText", "", 34, new Vector2(0, -10), new Vector2(1120, 280));
             UiBuilder.CreateButton(intro, "DanceButton", "Dance!", new Vector2(-230, -250), new Vector2(400, 110), controller.BeginRound, 48);
             UiBuilder.CreateButton(intro, "WithdrawButton", "Withdraw", new Vector2(230, -250), new Vector2(400, 110), controller.Withdraw);
+
+            // ----- Dance break panel (between two dances of a round) -----
+            RectTransform danceBreak = UiBuilder.CreateContainer(canvas, "DanceBreakPanel");
+            UiBuilder.CreateBox(danceBreak, "Box", new Vector2(0, 0), new Vector2(1100, 520), UiBuilder.Panel);
+            TMP_Text breakTitle = UiBuilder.CreateText(danceBreak, "BreakTitle", "Waltz: 80/100", 60, new Vector2(0, 190), new Vector2(1040, 90));
+            breakTitle.color = UiBuilder.Gold;
+            TMP_Text breakBody = UiBuilder.CreateText(danceBreak, "BreakBody", "", 32, new Vector2(0, 10), new Vector2(1000, 260));
+            breakBody.enableAutoSizing = true;
+            breakBody.fontSizeMin = 20;
+            breakBody.fontSizeMax = 32;
+            Button nextDanceButton = UiBuilder.CreateButton(danceBreak, "NextDanceButton", "Next: Tango", new Vector2(-220, -185), new Vector2(520, 100), controller.NextDance, 40);
+            UiBuilder.CreateButton(danceBreak, "WithdrawButton", "Withdraw", new Vector2(300, -185), new Vector2(340, 100), controller.Withdraw);
 
             // ----- Round result panel (after each round) -----
             RectTransform result = UiBuilder.CreateContainer(canvas, "RoundResultPanel");
@@ -238,18 +256,23 @@ namespace BallroomLegends.EditorTools
             UiBuilder.SetField(controller, "introPanel", intro.gameObject);
             UiBuilder.SetField(controller, "hudPanel", hud.gameObject);
             UiBuilder.SetField(controller, "roundResultPanel", result.gameObject);
+            UiBuilder.SetField(controller, "danceBreakPanel", danceBreak.gameObject);
+            UiBuilder.SetField(controller, "danceTitleText", danceTitle);
+            UiBuilder.SetField(controller, "breakTitleText", breakTitle);
+            UiBuilder.SetField(controller, "breakBodyText", breakBody);
+            UiBuilder.SetField(controller, "breakButtonLabel", nextDanceButton.GetComponentInChildren<TMP_Text>());
             UiBuilder.SetField(controller, "roundTitleText", roundTitle);
             UiBuilder.SetField(controller, "introText", introText);
             UiBuilder.SetField(controller, "countText", countText);
             UiBuilder.SetField(controller, "feedbackText", feedbackText);
             UiBuilder.SetField(controller, "scoreText", scoreText);
             UiBuilder.SetField(controller, "beatPulse", pulse);
-            UiBuilder.SetField(controller, "coupleMarker", marker);
             UiBuilder.SetField(controller, "resultTitleText", resultTitle);
             UiBuilder.SetField(controller, "resultBodyText", resultBody);
             UiBuilder.SetField(controller, "continueButtonLabel", continueButton.GetComponentInChildren<TMP_Text>());
 
             hud.gameObject.SetActive(false);
+            danceBreak.gameObject.SetActive(false);
             result.gameObject.SetActive(false);
         }
 

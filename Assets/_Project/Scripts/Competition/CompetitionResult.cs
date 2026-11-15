@@ -10,7 +10,12 @@ namespace BallroomLegends.Competition
     /// </summary>
     public class CompetitionResult
     {
+        /// <summary>What was danced, e.g. "Standard: Waltz, Tango, ... and Quickstep".</summary>
         public string DanceName = string.Empty;
+        /// <summary>"Standard" or "Latin".</summary>
+        public string StyleName = string.Empty;
+        /// <summary>The dances of every round, in order.</summary>
+        public List<string> DanceNames = new List<string>();
         public string PlayerCoupleName = string.Empty;
         public int FieldSize;
 

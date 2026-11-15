@@ -60,5 +60,100 @@ namespace BallroomLegends.Dance
             int remainder = beatIndex % beatsPerBar;
             return remainder < 0 ? remainder + beatsPerBar : remainder;
         }
+
+        // ---------- Steps (in fast dances not every beat is a step) ----------
+
+        /// <summary>Pressing faster than this feels like button mashing, not dancing.</summary>
+        public const double DefaultMaxStepsPerMinute = 140.0;
+
+        /// <summary>
+        /// How many beats apart the steps are: 1 = a step on every beat.
+        /// Quickstep (204 beats a minute) and Jive (172) are too fast for that, so you step on
+        /// every 2nd beat. Viennese Waltz (177, in 3/4) steps once a bar, on "ONE".
+        /// The interval always divides the bar, so "ONE" is always a step.
+        /// </summary>
+        public static int StepInterval(double beatsPerMinute, int beatsPerBar,
+            double maxStepsPerMinute = DefaultMaxStepsPerMinute)
+        {
+            if (beatsPerBar < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(beatsPerBar));
+            }
+
+            if (beatsPerMinute <= 0 || maxStepsPerMinute <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(beatsPerMinute), "Tempos must be positive.");
+            }
+
+            for (int interval = 1; interval < beatsPerBar; interval++)
+            {
+                if (beatsPerBar % interval == 0 && beatsPerMinute / interval <= maxStepsPerMinute)
+                {
+                    return interval;
+                }
+            }
+
+            return beatsPerBar; // One step per bar, on "ONE".
+        }
+
+        /// <summary>
+        /// How many bars a routine of about targetSeconds lasts. Fast dances get more bars and
+        /// slow ones fewer, so every dance takes roughly the same time.
+        /// Waltz (29 bars a minute) for 24 seconds: 11.6, rounded to 12 bars.
+        /// </summary>
+        public static int RoutineBars(double targetSeconds, double barsPerMinute, int minBars = 4)
+        {
+            if (barsPerMinute <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(barsPerMinute));
+            }
+
+            int bars = (int)Math.Round(targetSeconds * barsPerMinute / 60.0, MidpointRounding.AwayFromZero);
+            return Math.Max(minBars, bars);
+        }
+
+        /// <summary>
+        /// Listening beats before the first step. Always whole bars (so the first step is a
+        /// "ONE"), at least minBeats beats and at least minSeconds long, so fast dances
+        /// don't rush you. Waltz: 1 bar (3 beats). Samba (2/4): 2 bars. Quickstep: 2 bars.
+        /// </summary>
+        public static int CountInBeats(int countInBars, int beatsPerBar, double beatsPerMinute,
+            double minSeconds = 2.0, int minBeats = 3)
+        {
+            if (beatsPerBar < 1 || beatsPerMinute <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(beatsPerBar));
+            }
+
+            // The tiny subtraction stops 3.0000000001 from rounding up to an extra beat.
+            int beatsForTime = (int)Math.Ceiling(minSeconds * beatsPerMinute / 60.0 - 1e-9);
+            int neededBeats = Math.Max(minBeats, beatsForTime);
+            int bars = Math.Max(Math.Max(1, countInBars), (neededBeats + beatsPerBar - 1) / beatsPerBar);
+            return bars * beatsPerBar;
+        }
+
+        /// <summary>The beat index of step number <paramref name="step"/> (0 = the first step).</summary>
+        public static int StepBeat(int step, int firstStepBeat, int stepInterval) =>
+            firstStepBeat + step * stepInterval;
+
+        /// <summary>True when a beat is one you should step on.</summary>
+        public static bool IsStepBeat(int beatIndex, int firstStepBeat, int stepInterval) =>
+            beatIndex >= firstStepBeat && (beatIndex - firstStepBeat) % stepInterval == 0;
+
+        /// <summary>
+        /// The step closest to a moment in the song. Negative before the first step.
+        /// With a step on every 2nd beat, a press on the in-between beat is exactly halfway
+        /// and rounds to the later step (so it is judged as far too early for that step).
+        /// </summary>
+        public static int NearestStep(double songSeconds, double secondsPerBeat, int firstStepBeat, int stepInterval)
+        {
+            if (stepInterval < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stepInterval));
+            }
+
+            double beatsAfterFirstStep = songSeconds / secondsPerBeat - firstStepBeat;
+            return (int)Math.Round(beatsAfterFirstStep / stepInterval, MidpointRounding.AwayFromZero);
+        }
     }
 }

@@ -7,9 +7,11 @@ namespace BallroomLegends.Dance
     /// <summary>
     /// Runs the rhythm mechanic: plays the track, keeps time, and judges each step.
     ///
-    /// The routine: a count-in (just listen), then <see cref="StepCount"/> steps,
-    /// one per beat. Press SPACE (or the gamepad's south button) on every beat.
-    /// Waltz is 3/4 ("ONE-two-three") at 28-30 bars per minute, about 87 beats per minute.
+    /// The routine: a count-in (just listen), then <see cref="StepCount"/> steps.
+    /// Press SPACE (or the gamepad's south button) on every step.
+    /// Waltz is 3/4 ("ONE-two-three") at 28-30 bars per minute, about 87 beats per minute,
+    /// with a step on every beat. Fast dances step on every 2nd or 3rd beat instead
+    /// (see <see cref="RhythmMath.StepInterval"/>): Quickstep is 204 beats a minute!
     ///
     /// Other scripts don't poll this class; they subscribe to its events
     /// (<see cref="BeatTicked"/>, <see cref="StepJudged"/>, <see cref="DanceFinished"/>).
@@ -32,7 +34,10 @@ namespace BallroomLegends.Dance
 
         [Header("Routine")]
         [SerializeField, Min(0)] private int countInBars = 1;
-        [SerializeField, Min(1)] private int routineBars = 16;
+        [Tooltip("Roughly how long each dance lasts. Fast dances get more bars, slow ones fewer.")]
+        [SerializeField, Min(4f)] private float routineSeconds = 24f;
+        [Tooltip("Faster than this, you step on every 2nd (or 3rd) beat instead of every beat.")]
+        [SerializeField, Min(30f)] private float maxStepsPerMinute = 140f;
         [Tooltip("Seconds between pressing Dance! and the first count-in click.")]
         [SerializeField, Min(0.1f)] private float leadInSeconds = 0.5f;
 
@@ -54,8 +59,6 @@ namespace BallroomLegends.Dance
         /// <summary>The routine is over. The tracker holds the final counts and score.</summary>
         public event Action<PerformanceTracker> DanceFinished;
 
-        private const int MinCountInBeats = 3;
-
         private AudioClip _generatedClip;
         private double _songStartDsp;
         private bool[] _judged;
@@ -66,12 +69,21 @@ namespace BallroomLegends.Dance
         public float BeatsPerMinute => beatsPerMinute;
         public int BeatsPerBar => beatsPerBar;
         /// <summary>
-        /// Listening beats before the first step: whole bars, and at least 3 beats, so a 2/4
-        /// dance like Samba gets two bars instead of a too-short single bar.
+        /// Listening beats before the first step: whole bars, at least 3 beats and 2 seconds,
+        /// so a 2/4 dance like Samba gets two bars instead of a too-short single bar.
         /// </summary>
-        public int CountInBeats => Math.Max(countInBars, (MinCountInBeats + beatsPerBar - 1) / beatsPerBar) * beatsPerBar;
-        public int StepCount => routineBars * beatsPerBar;
+        public int CountInBeats => RhythmMath.CountInBeats(countInBars, beatsPerBar, beatsPerMinute);
+        /// <summary>Beats between two steps: 1 = every beat, 2 = every other beat, ...</summary>
+        public int StepInterval => RhythmMath.StepInterval(beatsPerMinute, beatsPerBar, maxStepsPerMinute);
+        public int RoutineBars => RhythmMath.RoutineBars(routineSeconds, beatsPerMinute / beatsPerBar);
+        /// <summary>Count-in plus routine: every click of the track.</summary>
+        public int TotalBeats => CountInBeats + RoutineBars * beatsPerBar;
+        public int StepCount => RoutineBars * beatsPerBar / StepInterval;
         public string DanceName => dance != null ? dance.DisplayName : "Waltz";
+
+        /// <summary>True for the beats you should step on (never during the count-in).</summary>
+        public bool IsStepBeat(int songBeat) =>
+            songBeat < TotalBeats && RhythmMath.IsStepBeat(songBeat, CountInBeats, StepInterval);
         public bool IsDancing { get; private set; }
         public PerformanceTracker Tracker { get; private set; }
 
@@ -157,7 +169,7 @@ namespace BallroomLegends.Dance
                 }
 
                 _generatedClip = MetronomeClip.Create(DanceName, beatsPerMinute, beatsPerBar,
-                    CountInBeats, CountInBeats + StepCount, AudioSettings.outputSampleRate);
+                    CountInBeats, TotalBeats, AudioSettings.outputSampleRate, StepInterval);
                 music.clip = _generatedClip;
             }
 
@@ -172,7 +184,8 @@ namespace BallroomLegends.Dance
             }
 
             IsDancing = true;
-            Debug.Log($"[DanceManager] {DanceName}: {beatsPerMinute:0} BPM, {beatsPerBar}/4, {StepCount} steps.");
+            Debug.Log($"[DanceManager] {DanceName}: {beatsPerMinute:0} BPM, {beatsPerBar}/4, " +
+                      $"{StepCount} steps (one every {StepInterval} beat(s)).");
         }
 
         /// <summary>Stops immediately without raising <see cref="DanceFinished"/> (e.g. Withdraw).</summary>
@@ -228,7 +241,7 @@ namespace BallroomLegends.Dance
         /// <summary>Raises <see cref="BeatTicked"/> once for every click that has played.</summary>
         private void AnnounceBeats(double songTime)
         {
-            int lastBeat = CountInBeats + StepCount - 1;
+            int lastBeat = TotalBeats - 1;
 
             // "while", not "if": after a slow frame, several beats may have passed.
             while (_nextBeatToAnnounce <= lastBeat &&
@@ -241,8 +254,7 @@ namespace BallroomLegends.Dance
 
         private void JudgePress(double stepTime)
         {
-            int beat = RhythmMath.NearestBeat(stepTime, SecondsPerBeat);
-            int step = beat - CountInBeats;
+            int step = RhythmMath.NearestStep(stepTime, SecondsPerBeat, CountInBeats, StepInterval);
 
             // Ignore presses during the count-in, after the routine, or a second press on
             // a step that's already judged (so mashing the key can't earn points).
@@ -251,6 +263,7 @@ namespace BallroomLegends.Dance
                 return;
             }
 
+            int beat = RhythmMath.StepBeat(step, CountInBeats, StepInterval);
             float offset = (float)RhythmMath.OffsetFromBeat(stepTime, beat, SecondsPerBeat);
             Record(step, EvaluateStep(offset), offset);
         }
@@ -266,7 +279,8 @@ namespace BallroomLegends.Dance
                     continue;
                 }
 
-                double beatTime = RhythmMath.BeatTime(CountInBeats + _nextStepToCheck, SecondsPerBeat);
+                int beat = RhythmMath.StepBeat(_nextStepToCheck, CountInBeats, StepInterval);
+                double beatTime = RhythmMath.BeatTime(beat, SecondsPerBeat);
                 if (stepTime <= beatTime + goodWindow)
                 {
                     break; // Still time to press this one.

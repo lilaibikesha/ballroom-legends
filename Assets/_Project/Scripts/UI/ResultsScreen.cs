@@ -55,8 +55,19 @@ namespace BallroomLegends.UI
 
                 text.AppendLine($"<color={Gold}>{TournamentRules.DisplayName(round.Round)}</color>: " +
                                 $"{TextFormat.Ordinal(round.Place)} of {round.CouplesInRound} ({outcome})");
-                text.AppendLine($"   Dance {round.DanceScore:0}/100, marks {round.TotalMarks}, " +
+                text.AppendLine($"   Marks {round.TotalMarks}, average dance {round.DanceScore:0}/100, " +
                                 $"{round.Perfect} perfect / {round.Good} good / {round.Miss} miss");
+
+                if (round.Dances.Count > 1)
+                {
+                    var perDance = new System.Collections.Generic.List<string>();
+                    foreach (DanceReport dance in round.Dances)
+                    {
+                        perDance.Add($"{dance.DanceName} {dance.Score:0}");
+                    }
+
+                    text.AppendLine($"   <size=85%>{string.Join("  |  ", perDance)}</size>");
+                }
             }
 
             return text.ToString();

@@ -16,14 +16,14 @@ with the music, and impress the judges round after round to win the championship
 - [x] Ballroom Training Hall (home base)
 - [x] One 2D ballroom (Blackpool Ballroom, placeholder art)
 - [x] Basic Waltz rhythm mechanic (3/4 time, timing windows: Perfect / Good / Miss)
-- [x] Simple tournament: 48 couples, 5 judges, recalls through Heat, Quarter-final,
-      Semi-final and Final
+- [x] Simple tournament: 48 couples, 3 judges, recalls through Heat, Quarter-final,
+      Semi-final and Final (4 couples or fewer go straight to the Final)
 - [x] Results screen
 - [x] Full Blackpool rounds: every round has all 5 dances of your style; judges mark each
       dance and the totals decide the recalls. Fast dances (Quickstep, Viennese Waltz, Jive)
       step on every 2nd or 3rd beat
 - [x] Dancers on the floor: your heat of up to 12 couples (you in gold), Standard couples
-      travel the line of dance and Latin couples dance on the spot, 5 judges holding up
+      travel the line of dance and Latin couples dance on the spot, 3 judges holding up
       mark paddles, an audience that cheers
 
 Code is written but still needs a first run in Unity: see `docs/COMPETITION.md` > Try it.
@@ -70,8 +70,8 @@ Assets/
       Player/               PlayerNameRules
       UI/                   MainMenuScreen, DanceGuideScreen, ResultsScreen
       Training/             TrainingHallScreen
-      Tournament/           TournamentManager, TournamentRules, JudgePanel, CompetitorField,
-                            Couple, RoundType, RandomUtil
+      Tournament/           TournamentManager, TournamentRules, TournamentRanking, JudgePanel,
+                            CompetitorField, Couple, RoundType, RandomUtil
       Competition/          CompetitionController (ballroom scene), CompetitionResult,
                             RoundProgramme, RoundReport, DanceReport, RankingEntry, TextFormat
       Floor/                BallroomFloor, CoupleView, CoupleLook, FloorLayout, FloorShapes
@@ -97,6 +97,7 @@ ProjectSettings/            Unity project settings (tracked)
 | `DanceManager` | Rhythm mechanic: click track on the audio clock, judges each step, raises events. |
 | `RhythmMath` / `PerformanceTracker` | Pure timing math, and the Perfect / Good / Miss counts and 0-100 score. |
 | `TournamentManager` | Registers couples, stores judges' marks, ranks, recalls the best to the next round. |
+| `TournamentRanking` | Pure ranking rules: highest total, then highest single mark, then name A to Z. |
 | `JudgePanel` / `CompetitorField` | Turns a dance into judges' marks; creates the 47 AI couples. |
 | `CompetitionController` | Ballroom scene director: runs the 5 dances of each round, connects the dance, the tournament, the floor and the UI. |
 | `BallroomFloor` / `CoupleView` | Draws your heat of couples, the judges and the audience, and animates them on the beat. |

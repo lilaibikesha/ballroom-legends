@@ -131,7 +131,7 @@ namespace BallroomLegends.Floor
 
         /// <summary>
         /// Every click of the track. On a step beat the AI couples take their step (the
-        /// player's couple waits for your SPACE press, see <see cref="OnPlayerStep"/>).
+        /// player's couple waits for your step press, see <see cref="OnPlayerStep"/>).
         /// </summary>
         public void OnBeat(bool isStepBeat, bool isDownbeat)
         {
@@ -166,7 +166,7 @@ namespace BallroomLegends.Floor
             }
         }
 
-        /// <summary>Your SPACE press was judged: step forward, or wobble on a miss.</summary>
+        /// <summary>Your step press was judged: step forward, or wobble on a miss.</summary>
         public void OnPlayerStep(HitResult result)
         {
             if (_player == null)

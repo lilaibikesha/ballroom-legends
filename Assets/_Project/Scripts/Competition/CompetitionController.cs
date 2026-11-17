@@ -245,7 +245,7 @@ namespace BallroomLegends.Competition
             SetText(introText,
                 $"{heatLine} {recall}\n\n" +
                 $"{dances}\n" +
-                "Press <b>SPACE</b> on every lit beat. Fast dances step on every 2nd or 3rd beat: listen for the loud clicks.");
+                "Press an <b>ARROW</b> key on every lit beat. Fast dances step on every 2nd or 3rd beat: listen for the loud clicks.");
         }
 
         /// <summary>The "Dance!" button: the first dance of the round.</summary>

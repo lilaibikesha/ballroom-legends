@@ -8,7 +8,8 @@ namespace BallroomLegends.Dance
     /// Runs the rhythm mechanic: plays the track, keeps time, and judges each step.
     ///
     /// The routine: a count-in (just listen), then <see cref="StepCount"/> steps.
-    /// Press SPACE (or the gamepad's south button) on every step.
+    /// Press any ARROW key on every step (Space and a gamepad's D-pad or south button work
+    /// too). For now the direction doesn't matter; real step patterns can use it later.
     /// Waltz is 3/4 ("ONE-two-three") at 28-30 bars per minute, about 87 beats per minute,
     /// with a step on every beat. Fast dances step on every 2nd or 3rd beat instead
     /// (see <see cref="RhythmMath.StepInterval"/>): Quickstep is 204 beats a minute!
@@ -89,6 +90,9 @@ namespace BallroomLegends.Dance
 
         /// <summary>Seconds since the first click. Negative during the lead-in.</summary>
         public double SongTime => AudioSettings.dspTime - _songStartDsp;
+
+        /// <summary>Where the song is in beats: 2.5 = halfway between beat 2 and beat 3.</summary>
+        public double SongPositionInBeats => RhythmMath.SongPositionInBeats(SongTime, beatsPerMinute);
 
         private void Awake()
         {
@@ -224,28 +228,45 @@ namespace BallroomLegends.Dance
             }
         }
 
+        /// <summary>
+        /// True on the frame a step key goes down. "wasPressedThisFrame" is true for one frame
+        /// only, so holding a key down is one step, not one step per frame.
+        /// Pressing two arrows in the same frame also counts as one step.
+        /// </summary>
         private static bool StepPressedThisFrame()
         {
             // Unity 6 uses the Input System package. Keyboard.current is null when no
             // keyboard is connected, hence the null checks.
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+            if (keyboard != null && (AnyArrowPressed(keyboard) || keyboard.spaceKey.wasPressedThisFrame))
             {
                 return true;
             }
 
             Gamepad gamepad = Gamepad.current;
-            return gamepad != null && gamepad.buttonSouth.wasPressedThisFrame;
+            return gamepad != null && (gamepad.dpad.up.wasPressedThisFrame ||
+                                       gamepad.dpad.down.wasPressedThisFrame ||
+                                       gamepad.dpad.left.wasPressedThisFrame ||
+                                       gamepad.dpad.right.wasPressedThisFrame ||
+                                       gamepad.buttonSouth.wasPressedThisFrame);
         }
+
+        private static bool AnyArrowPressed(Keyboard keyboard) =>
+            keyboard.upArrowKey.wasPressedThisFrame ||
+            keyboard.downArrowKey.wasPressedThisFrame ||
+            keyboard.leftArrowKey.wasPressedThisFrame ||
+            keyboard.rightArrowKey.wasPressedThisFrame;
 
         /// <summary>Raises <see cref="BeatTicked"/> once for every click that has played.</summary>
         private void AnnounceBeats(double songTime)
         {
             int lastBeat = TotalBeats - 1;
 
+            // Convert the clock to beats once: beat 4 has played when we're at 4.0 or later.
+            double songBeats = RhythmMath.SongPositionInBeats(songTime, beatsPerMinute);
+
             // "while", not "if": after a slow frame, several beats may have passed.
-            while (_nextBeatToAnnounce <= lastBeat &&
-                   songTime >= RhythmMath.BeatTime(_nextBeatToAnnounce, SecondsPerBeat))
+            while (_nextBeatToAnnounce <= lastBeat && songBeats >= _nextBeatToAnnounce)
             {
                 BeatTicked?.Invoke(_nextBeatToAnnounce, RhythmMath.BeatInBar(_nextBeatToAnnounce, beatsPerBar));
                 _nextBeatToAnnounce++;
@@ -305,9 +326,13 @@ namespace BallroomLegends.Dance
         /// Pure function: rates a step from its distance to the nearest beat.
         /// Negative = early, positive = late; both count the same.
         /// The windows are inclusive: exactly 0.05 s off is still Perfect (see the tests).
+        /// It's static and takes the windows as arguments, so tests can call it without
+        /// creating a GameObject.
         /// </summary>
         public static HitResult EvaluateStep(float secondsFromBeat, float perfectWindow, float goodWindow)
         {
+            // Math.Abs turns "0.08 s early" (-0.08) into 0.08, so early and late are judged
+            // the same way. Without it, every early press would look Perfect (-0.08 < 0.05).
             float distance = Math.Abs(secondsFromBeat);
 
             if (distance <= perfectWindow)

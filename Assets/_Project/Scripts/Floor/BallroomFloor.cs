@@ -8,7 +8,7 @@ namespace BallroomLegends.Floor
 {
     /// <summary>
     /// Everything you see on and around the ballroom floor: the couples of your heat, the
-    /// five judges along the front, and the audience at the sides.
+    /// judges along the front (3 by default), and the audience at the sides.
     ///
     /// It only shows things. CompetitionController tells it what happened ("a beat",
     /// "the player hit a step", "here are the judges' marks") and it animates that.
@@ -64,7 +64,8 @@ namespace BallroomLegends.Floor
         {
             // Order of creation = drawing order: audience and judges first, couples on top.
             BuildAudience();
-            BuildJudges(5);
+            // SetUpRound rebuilds the panel if the tournament uses a different number.
+            BuildJudges(TournamentRules.DefaultNumberOfJudges);
             _couplesLayer = FloorShapes.CreateRect(transform, "Couples", Vector2.zero, Vector2.zero);
         }
 
@@ -166,7 +167,7 @@ namespace BallroomLegends.Floor
             }
         }
 
-        /// <summary>Your step press was judged: step forward, or wobble on a miss.</summary>
+        /// <summary>Your step (arrow key) was judged: step forward, or wobble on a miss.</summary>
         public void OnPlayerStep(HitResult result)
         {
             if (_player == null)

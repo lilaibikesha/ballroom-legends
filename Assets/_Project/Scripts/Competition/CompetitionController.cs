@@ -202,8 +202,8 @@ namespace BallroomLegends.Competition
             int aiCount = tournamentManager.FieldSize - 1;
             List<Couple> field = CompetitorField.CreateAiCouples(aiCount, _random, aiMinSkill, Mathf.Max(aiMinSkill, aiMaxSkill));
 
-            // Ties are broken by start number (see TournamentManager.GetRanking). A random
-            // start number keeps that fair: always first would win every tie.
+            // A random start number mixes you into the field, so you aren't always in the
+            // first heat. (Ties are broken by name, see TournamentRanking.Rank.)
             field.Insert(_random.Next(field.Count + 1), _player);
 
             foreach (Couple couple in field)
@@ -228,7 +228,7 @@ namespace BallroomLegends.Competition
             SetText(roundTitleText, $"{TournamentRules.DisplayName(round)}: {_style}");
 
             string recall = TournamentRules.IsLastRound(round)
-                ? "The judges will place all six finalists."
+                ? $"The judges will place all {couples} finalists."
                 : $"The best {tournamentManager.CouplesAdvancingFromCurrentRound} are recalled to the " +
                   $"{TournamentRules.DisplayName(TournamentRules.Next(round))}.";
 

@@ -61,6 +61,55 @@ namespace BallroomLegends.Dance
             return remainder < 0 ? remainder + beatsPerBar : remainder;
         }
 
+        // ---------- The beat clock: song seconds -> beats ----------
+        //
+        // Why doubles? Song time comes from AudioSettings.dspTime, a double that counts the
+        // seconds since the audio system started. A float only keeps about 7 digits: after a
+        // few hours it can only count in steps of a few milliseconds, after a day in steps of
+        // about 8 ms, and our Perfect window is only 50 ms wide. A double keeps about 15
+        // digits, which is precise to far less than a millisecond for years.
+        // The tempo stays a float because that's what the Inspector stores; C# widens it to
+        // a double automatically as soon as it's multiplied with one.
+
+        /// <summary>
+        /// Where the song is, counted in beats. 0 = the first click, 2.5 = halfway between
+        /// beat 2 and beat 3, negative = the lead-in before the first click.
+        /// At 120 BPM, 1.25 seconds in is beat 2.5.
+        /// </summary>
+        public static double SongPositionInBeats(double songSeconds, float bpm)
+        {
+            RequirePositiveTempo(bpm);
+
+            // beats = seconds x beats-per-second, and beats-per-second = bpm / 60.
+            return songSeconds * bpm / 60.0;
+        }
+
+        /// <summary>
+        /// How far a moment is from the closest beat. Negative = early, positive = late.
+        /// Exactly halfway between two beats counts as early for the later one.
+        /// This judges against every beat. DanceManager judges against the nearest STEP
+        /// instead, because fast dances skip beats; when every beat is a step, both agree
+        /// (see RhythmMathTests).
+        /// </summary>
+        public static double SecondsFromNearestBeat(double songSeconds, float bpm)
+        {
+            RequirePositiveTempo(bpm);
+
+            // Built from the small functions above, so every piece is already tested.
+            double secondsPerBeat = SecondsPerBeat(bpm);
+            int nearestBeat = NearestBeat(songSeconds, secondsPerBeat);
+            return OffsetFromBeat(songSeconds, nearestBeat, secondsPerBeat);
+        }
+
+        /// <summary>A guard clause: a tempo of 0 would divide by zero, so fail loudly instead.</summary>
+        private static void RequirePositiveTempo(float bpm)
+        {
+            if (bpm <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bpm), "The tempo must be positive.");
+            }
+        }
+
         // ---------- Steps (in fast dances not every beat is a step) ----------
 
         /// <summary>Pressing faster than this feels like button mashing, not dancing.</summary>

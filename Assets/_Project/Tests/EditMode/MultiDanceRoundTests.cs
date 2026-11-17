@@ -30,24 +30,24 @@ namespace BallroomLegends.Tests
         {
             var couple = Register("Luca & Mia");
 
-            Assert.IsTrue(_tournament.AddDanceScores(couple, new[] { 8, 8, 8, 8, 8 })); // Waltz: 40
-            Assert.IsTrue(_tournament.AddDanceScores(couple, new[] { 6, 7, 6, 7, 6 })); // Tango: 32
+            Assert.IsTrue(_tournament.AddDanceScores(couple, new[] { 8, 8, 8 })); // Waltz: 24
+            Assert.IsTrue(_tournament.AddDanceScores(couple, new[] { 6, 7, 6 })); // Tango: 19
 
-            Assert.AreEqual(72, _tournament.GetTotal(couple));
+            Assert.AreEqual(43, _tournament.GetTotal(couple));
             Assert.AreEqual(2, _tournament.GetDancesMarked(couple));
-            Assert.AreEqual(10, _tournament.GetScores(couple).Count);
+            Assert.AreEqual(6, _tournament.GetScores(couple).Count, "3 judges x 2 dances");
         }
 
         [Test]
         public void AddDanceScores_RejectsBadMarks_WithoutChangingTheTotal()
         {
             var couple = Register("Hugo & Isla");
-            _tournament.AddDanceScores(couple, new[] { 5, 5, 5, 5, 5 });
+            _tournament.AddDanceScores(couple, new[] { 5, 5, 5 });
 
-            Assert.IsFalse(_tournament.AddDanceScores(couple, new[] { 5, 5, 5 }));
-            Assert.IsFalse(_tournament.AddDanceScores(couple, new[] { 5, 5, 5, 5, 11 }));
+            Assert.IsFalse(_tournament.AddDanceScores(couple, new[] { 5, 5 }));
+            Assert.IsFalse(_tournament.AddDanceScores(couple, new[] { 5, 5, 11 }));
 
-            Assert.AreEqual(25, _tournament.GetTotal(couple));
+            Assert.AreEqual(15, _tournament.GetTotal(couple));
             Assert.AreEqual(1, _tournament.GetDancesMarked(couple));
         }
 
@@ -58,10 +58,10 @@ namespace BallroomLegends.Tests
             var waltzStar = Register("Waltz star");
             var allRounder = Register("All-rounder");
 
-            _tournament.AddDanceScores(waltzStar, new[] { 10, 10, 10, 10, 10 });
-            _tournament.AddDanceScores(waltzStar, new[] { 5, 5, 5, 5, 5 });
-            _tournament.AddDanceScores(allRounder, new[] { 8, 8, 8, 8, 8 });
-            _tournament.AddDanceScores(allRounder, new[] { 8, 8, 8, 8, 8 });
+            _tournament.AddDanceScores(waltzStar, new[] { 10, 10, 10 }); // 30
+            _tournament.AddDanceScores(waltzStar, new[] { 5, 5, 5 }); // + 15 = 45
+            _tournament.AddDanceScores(allRounder, new[] { 8, 8, 8 }); // 24
+            _tournament.AddDanceScores(allRounder, new[] { 8, 8, 8 }); // + 24 = 48
 
             Assert.AreEqual(allRounder, _tournament.GetRanking()[0]);
         }
@@ -70,20 +70,26 @@ namespace BallroomLegends.Tests
         public void SubmitScores_ReplacesEveryDance()
         {
             var couple = Register("Leo & Zara");
-            _tournament.AddDanceScores(couple, new[] { 9, 9, 9, 9, 9 });
-            _tournament.AddDanceScores(couple, new[] { 9, 9, 9, 9, 9 });
+            _tournament.AddDanceScores(couple, new[] { 9, 9, 9 });
+            _tournament.AddDanceScores(couple, new[] { 9, 9, 9 });
 
-            _tournament.SubmitScores(couple, new[] { 2, 2, 2, 2, 2 });
+            _tournament.SubmitScores(couple, new[] { 2, 2, 2 });
 
-            Assert.AreEqual(10, _tournament.GetTotal(couple));
+            Assert.AreEqual(6, _tournament.GetTotal(couple));
             Assert.AreEqual(1, _tournament.GetDancesMarked(couple));
         }
 
         [Test]
         public void NextRound_StartsAgainFromZeroDances()
         {
-            var couple = Register("Only");
-            _tournament.AddDanceScores(couple, new[] { 7, 7, 7, 7, 7 });
+            // 6 couples: more than 4, so there is a First Round to move on from.
+            var couple = Register("Leader");
+            for (int i = 0; i < 5; i++)
+            {
+                Register($"Couple {i}");
+            }
+
+            _tournament.AddDanceScores(couple, new[] { 7, 7, 7 });
 
             _tournament.AdvanceToNextRound();
 

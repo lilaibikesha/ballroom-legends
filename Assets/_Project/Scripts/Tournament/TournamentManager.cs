@@ -10,29 +10,42 @@ namespace BallroomLegends.Tournament
     /// ranks couples and recalls the best ones to the next round.
     ///
     /// Round sizes follow <see cref="TournamentRules.CouplesInRound"/>: 48, 24, 12, Final of 6.
+    /// With 4 couples or fewer there's no one to knock out, so the first round is the Final
+    /// (<see cref="TournamentRules.FirstRound"/>).
     ///
     /// Like the real Blackpool Festival, a round can have several dances (all five of the
     /// style). Each dance adds one mark per judge with <see cref="AddDanceScores"/>, and the
     /// ranking uses the total over every dance of the round.
+    ///
+    /// The ranking rules themselves live in <see cref="TournamentRanking"/>, a pure static
+    /// class: this MonoBehaviour only stores the marks and asks it for the order.
     /// </summary>
     public class TournamentManager : MonoBehaviour
     {
-        [SerializeField, Min(1)] private int numberOfJudges = 5;
+        [Tooltip("Marks per couple per dance. Changing it here only affects new components: an existing scene keeps its saved value.")]
+        [SerializeField, Min(1)] private int numberOfJudges = TournamentRules.DefaultNumberOfJudges;
         [Tooltip("Couples in the Final. Each earlier round has twice as many (6, 12, 24, 48).")]
         [SerializeField, Min(1)] private int finalists = TournamentRules.DefaultFinalists;
 
-        // In start-number order (the order they registered). Ties are broken by this order.
+        // In start-number order (the order they registered).
         private readonly List<Couple> _couples = new();
 
         // Marks for the current round: each couple -> one mark per judge, for every dance
-        // danced so far (5 judges x 3 dances = 15 marks).
+        // danced so far (3 judges x 5 dances = 15 marks).
         private readonly Dictionary<Couple, List<int>> _scores = new();
 
         // How many dances of the current round each couple has been marked for.
         private readonly Dictionary<Couple, int> _dancesMarked = new();
 
+        /// <summary>
+        /// The round being danced. While couples register it follows the field size
+        /// (4 or fewer: Final), and it's fixed once registration closes.
+        /// </summary>
         public RoundType CurrentRound { get; private set; } = RoundType.Heat;
         public bool IsFinished { get; private set; }
+
+        /// <summary>Open until the first marks arrive (or the tournament moves on).</summary>
+        public bool IsRegistrationOpen { get; private set; } = true;
         public IReadOnlyList<Couple> Couples => _couples;
         public int NumberOfJudges => numberOfJudges;
         public int Finalists => finalists;
@@ -55,22 +68,31 @@ namespace BallroomLegends.Tournament
             _dancesMarked.Clear();
             CurrentRound = RoundType.Heat;
             IsFinished = false;
+            IsRegistrationOpen = true;
         }
 
+        /// <summary>
+        /// Adds a couple to the start list. Returns false (and changes nothing) for null, a
+        /// couple that's already registered, or once registration has closed.
+        /// Returning a bool instead of throwing lets the caller decide what a refusal means.
+        /// </summary>
         public bool RegisterCouple(Couple couple)
         {
+            // Guard clauses: check every way the input can be wrong first, then do the work.
             if (couple == null)
             {
                 Debug.LogWarning("[Tournament] Can't register a null couple.");
                 return false;
             }
 
-            if (CurrentRound != RoundType.Heat || _scores.Count > 0)
+            if (!IsRegistrationOpen)
             {
                 Debug.LogWarning($"[Tournament] Registration is closed. {couple} was not added.");
                 return false;
             }
 
+            // Contains compares references: two different Couple objects with the same name
+            // are two couples (like two real couples who happen to share a name).
             if (_couples.Contains(couple))
             {
                 Debug.LogWarning($"[Tournament] {couple} is already registered.");
@@ -78,6 +100,9 @@ namespace BallroomLegends.Tournament
             }
 
             _couples.Add(couple);
+
+            // The field size decides the first round, so update it after every new couple.
+            CurrentRound = TournamentRules.FirstRound(_couples.Count);
             return true;
         }
 
@@ -95,6 +120,9 @@ namespace BallroomLegends.Tournament
             // Store a copy, so the caller changing its list later can't change our data.
             _scores[couple] = new List<int>(judgeScores);
             _dancesMarked[couple] = 1;
+
+            // Dancing has started: from now on the start list (and so the round) is fixed.
+            IsRegistrationOpen = false;
             return true;
         }
 
@@ -120,6 +148,7 @@ namespace BallroomLegends.Tournament
                 _dancesMarked[couple] = 1;
             }
 
+            IsRegistrationOpen = false;
             return true;
         }
 
@@ -161,7 +190,7 @@ namespace BallroomLegends.Tournament
         }
 
         public int GetTotal(Couple couple) =>
-            couple != null && _scores.TryGetValue(couple, out List<int> marks) ? marks.Sum() : 0;
+            couple != null && _scores.TryGetValue(couple, out List<int> marks) ? TournamentRanking.Total(marks) : 0;
 
         public IReadOnlyList<int> GetScores(Couple couple) =>
             couple != null && _scores.TryGetValue(couple, out List<int> marks)
@@ -169,23 +198,11 @@ namespace BallroomLegends.Tournament
                 : (IReadOnlyList<int>)Array.Empty<int>();
 
         /// <summary>
-        /// Couples of the current round, best first:
-        ///  1. couples with marks before couples without
-        ///  2. higher total of all judges' marks
-        ///  3. tie? the higher single best mark
-        ///  4. still tied? the lower start number (LINQ's OrderBy is stable, so the original
-        ///     registration order survives as the last tie-breaker)
-        /// Stretch goal: real DanceSport uses the Skating System (judges give placements and
-        /// the majority decides). See docs/COMPETITION.md.
+        /// Couples of the current round, best first: highest total, then the highest single
+        /// mark, then the name A to Z. The rules live in <see cref="TournamentRanking.Rank"/>
+        /// so they can be tested without a GameObject.
         /// </summary>
-        public List<Couple> GetRanking()
-        {
-            return _couples
-                .OrderByDescending(couple => _scores.ContainsKey(couple))
-                .ThenByDescending(GetTotal)
-                .ThenByDescending(BestMark)
-                .ToList();
-        }
+        public List<Couple> GetRanking() => TournamentRanking.Rank(_couples, _scores);
 
         /// <summary>1 = winner of the round. -1 if the couple isn't in this round.</summary>
         public int GetPlace(Couple couple)
@@ -206,6 +223,9 @@ namespace BallroomLegends.Tournament
                 Debug.LogWarning("[Tournament] Already finished.");
                 return;
             }
+
+            // Moving on (or finishing) always closes registration, even if nobody was marked.
+            IsRegistrationOpen = false;
 
             if (TournamentRules.IsLastRound(CurrentRound))
             {
@@ -229,8 +249,5 @@ namespace BallroomLegends.Tournament
             CurrentRound = TournamentRules.Next(CurrentRound);
             Debug.Log($"[Tournament] {_couples.Count} couples recalled to the {CurrentRound}.");
         }
-
-        private int BestMark(Couple couple) =>
-            _scores.TryGetValue(couple, out List<int> marks) && marks.Count > 0 ? marks.Max() : 0;
     }
 }

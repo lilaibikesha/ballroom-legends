@@ -57,8 +57,7 @@ fix a typo or add a dance without touching code, and every screen reads the same
    every button and Inspector slot, and plugs the DanceLibrary into the Dance Guide.
 3. Open `Assets/_Project/Scenes/MainMenu.unity` and press **Play**.
    You can also press Play in any other scene: the GameManager creates itself on startup.
-4. **Window > General > Test Runner > EditMode > Run All**. Expect everything green except
-   the one ignored DanceManager test.
+4. **Window > General > Test Runner > EditMode > Run All**. Expect everything green.
 
 The generated UI is a plain placeholder layout (purple boxes, gold titles). Move, resize and
 restyle anything in the Scene view; the code only cares about the Inspector references.
@@ -85,8 +84,8 @@ Exercises if you want to practice on this code:
 - Videos: add a `VideoPlayer` + `RawImage` to the detail panel and play `_currentDance.Video`
   in `DanceGuideScreen.PlayVideo`.
 
-## Next milestone
+## Next: the competition
 
-`DanceManager` (Waltz rhythm: `EvaluateStep` test-first, beat clock with
-`AudioSettings.dspTime`) and `TournamentManager`, reached from the Training Hall's
-"Go to competition" button.
+The Training Hall's "Go to competition" button opens the ballroom: the rhythm mechanic
+(`DanceManager`) and the tournament (`TournamentManager`). See
+[COMPETITION.md](COMPETITION.md).

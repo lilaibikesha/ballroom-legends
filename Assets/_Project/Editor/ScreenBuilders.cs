@@ -217,7 +217,7 @@ namespace BallroomLegends.EditorTools
             RectTransform pulse = UiBuilder.CreateCircle(hud, "BeatPulse", new Vector2(0, -40), new Vector2(150, 150), new Color(1f, 1f, 1f, 0.85f));
             TMP_Text feedbackText = UiBuilder.CreateText(hud, "FeedbackText", "", 64, new Vector2(0, -200), new Vector2(1200, 90));
             TMP_Text scoreText = UiBuilder.CreateText(hud, "ScoreText", "", 34, new Vector2(560, 210), new Vector2(480, 110), TextAlignmentOptions.TopRight);
-            UiBuilder.CreateText(hud, "Hint", "Press SPACE on every lit beat", 28, new Vector2(-560, 210), new Vector2(480, 60), TextAlignmentOptions.TopLeft);
+            UiBuilder.CreateText(hud, "Hint", "Press an ARROW key on every lit beat", 28, new Vector2(-560, 210), new Vector2(480, 60), TextAlignmentOptions.TopLeft);
 
             // ----- Intro panel (before each round) -----
             RectTransform intro = UiBuilder.CreateContainer(canvas, "IntroPanel");

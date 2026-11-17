@@ -12,7 +12,7 @@ Inside the ballroom, every round goes the same way:
 [Intro panel]   "Quarter-final: Standard. 24 couples in 2 heats. The best 12 are recalled."
       |          Dance! | Withdraw
       v
-[HUD]           dance 1 of 5: Waltz. Count-in (just listen), then press SPACE on every lit beat
+[HUD]           dance 1 of 5: Waltz. Count-in (just listen), then press an ARROW key on every lit beat
       |         "ONE  two  three" lights up, Perfect / Good / Miss, score, combo
       v         the judges hold up their marks for you
 [Dance break]   "Waltz: 82/100", your marks, your place so far     Next: Tango | Withdraw
@@ -31,13 +31,18 @@ Inside the ballroom, every round goes the same way:
 | Semi-final | 12 | everyone | 6 |
 | Final | 6 | everyone | placed 1st to 6th |
 
+A field of 4 couples or fewer has nobody to knock out, so it skips straight to the Final
+(`TournamentRules.FirstRound`). The game always enters 48, so this matters for tests and
+future small events.
+
 | Style | Dances (in competition order) |
 | --- | --- |
 | Standard | Waltz, Tango, Viennese Waltz, Slow Foxtrot, Quickstep |
 | Latin | Samba, Cha Cha Cha, Rumba, Paso Doble, Jive |
 
-The judges mark every couple after every dance (5 judges, 1-10 each). Your round total is
-the sum of all of them: 5 dances x 5 judges = 25 marks, so a perfect round is 250.
+The judges mark every couple after every dance (3 judges, 1-10 each). Your round total is
+the sum of all of them: 5 dances x 3 judges = 15 marks, so a perfect round is 150.
+Ties are broken by the highest single mark, then by name (A to Z): see `TournamentRanking`.
 A great Waltz can't save a weak Quickstep: you need to be an all-rounder.
 
 ## Steps: not every beat is a step
@@ -66,7 +71,7 @@ lasts about 24 seconds (`Routine Seconds`): slow dances get fewer bars, fast one
 ## On the floor
 
 `BallroomFloor` draws your heat: up to 12 couples seen from above (her skirt, his
-shoulders), the five judges along the front and the audience in the side galleries.
+shoulders), the three judges along the front and the audience in the side galleries.
 
 - **Standard**: couples travel anticlockwise around the floor (the "line of dance"). Your
   couple (gold dress, gold ring, "You") only moves forward when you dance the step. A Miss
@@ -89,8 +94,8 @@ Real sprites can replace it later without touching the competition logic.
 3. Open `MainMenu.unity`, press **Play**, go through the new-game flow, then
    **Go to competition** in the Training Hall. You can also press Play directly in
    `BlackpoolBallroom.unity` (it uses Standard).
-4. Turn the sound on. Listen to the count-in of low clicks, then press **SPACE** on every
-   lit beat. The high click is beat ONE.
+4. Turn the sound on. Listen to the count-in of low clicks, then press any **arrow key**
+   on every lit beat (Space and a gamepad also work). The high click is beat ONE.
 5. Testing and five dances take too long? Select **CompetitionController** and set
    `Dances Per Round` to 1 or 2.
 6. **Test Runner > EditMode > Run All**. Everything should be green.
@@ -107,7 +112,8 @@ Tuning lives in the Inspector, no code needed:
   how often AI couples wobble, judge and audience positions.
 
 Difficulty, from a simulation of 2,000 competitions per average dance score (five dances a
-round). Adding up five dances makes luck matter less than with one dance:
+round). Adding up five dances makes luck matter less than with one dance. (Measured with 5
+judges; with 3 judges each total has a little more luck in it, so expect small changes.)
 
 | Your average score | Past the First Round | Reach the Semi-final | Reach the Final | Win |
 | --- | --- | --- | --- | --- |
@@ -121,15 +127,16 @@ round). Adding up five dances makes luck matter less than with one dance:
 ## How it works (read the code in this order)
 
 1. `Dance/RhythmMath.cs`: pure timing math. Beat times, nearest beat, early/late offset,
-   beat-in-bar with a true modulo (C#'s `%` is negative for negative numbers). The step
-   part: `StepInterval`, `RoutineBars`, `CountInBeats`, `NearestStep`.
+   beat-in-bar with a true modulo (C#'s `%` is negative for negative numbers). The beat
+   clock: `SongPositionInBeats` and `SecondsFromNearestBeat` (doubles, because `dspTime`
+   is a double). The step part: `StepInterval`, `RoutineBars`, `CountInBeats`, `NearestStep`.
 2. `Dance/DanceManager.cs`:
    - **Why `AudioSettings.dspTime`?** It's the audio hardware's clock, the same clock the
      music plays on. `Time.time` is the frame clock: it drifts from the audio and jumps
      on slow frames. `PlayScheduled(startDsp)` starts the music on an exact audio-clock
      time, so beat 0 and the first click line up.
    - `Update` does four things: announce beats that have passed (a `while` loop, because
-     a slow frame can skip several), judge a SPACE press against the nearest **step**,
+     a slow frame can skip several), judge an arrow-key press against the nearest **step**,
      turn steps whose Good window has closed into Misses, and finish.
    - Pressing twice on one step, or during the count-in, is ignored: no points for mashing.
      Pressing on an in-between beat of a fast dance counts as a badly-timed press for the
@@ -145,8 +152,10 @@ round). Adding up five dances makes luck matter less than with one dance:
    `RandomUtil`), rounded and clamped to 1-10. The `System.Random` is passed in
    (dependency injection), so tests use a fixed seed and get the same marks every time.
 6. `Tournament/TournamentManager.cs`: `AddDanceScores` adds one dance's marks to a couple;
-   guard clauses on every input; ranking with LINQ (`OrderByDescending(...).ThenByDescending(...)`)
-   on the total of all dances, ties broken by best single mark and then start number.
+   guard clauses on every input; registration closes when the first marks arrive.
+   `Tournament/TournamentRanking.cs`: the pure ranking rules with LINQ
+   (`OrderByDescending(...).ThenByDescending(...).ThenBy(...)`): the total of all dances,
+   ties broken by the best single mark and then the name.
 7. `Competition/RoundProgramme.cs`, `DanceReport.cs`, `RoundReport.cs`: which dances a round
    has, and what you scored in each one. `RoundReport.AddDance` keeps the round totals.
 8. `Competition/CompetitionController.cs`: the only class that knows the dance, the
